@@ -1,0 +1,16 @@
+---
+- name: add user "{{ user }}"
+  become_method: su
+  become: true
+  user:
+    name: "{{ user }}"
+    password: "{{ password }}"
+    groups: sudo
+    shell: /bin/zsh
+    state: present
+- name: copy ssh keys for "{{ user }}"
+  become_method: su
+  become: true
+  authorized_key:
+    user: "{{ user }}"
+    key: "{{ ssh_keys }}"
