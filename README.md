@@ -11,5 +11,5 @@ Basic setup
 call via
 
 ```
-ansible-playbook basic_setup.yaml -i 77.87.49.9, -u $INITIALUSERNAME -k -K --extra-vars="user=$USERNAME password=$CREATED WITH mkpasswd --method=sha-512"
+ansible-playbook basic_setup.yaml -i $HOST_OR_IP, -u $INITIALUSERNAME -k -K --extra-vars="user=$USERNAME password=$CREATED WITH mkpasswd --method=sha-512"
 ```
