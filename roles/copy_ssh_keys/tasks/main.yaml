@@ -1,0 +1,7 @@
+---
+- name: copy ssh keys for "{{ user }}"
+  become_method: su
+  become: true
+  authorized_key:
+    user: "{{ user }}"
+    key: "{{ ssh_keys }}"

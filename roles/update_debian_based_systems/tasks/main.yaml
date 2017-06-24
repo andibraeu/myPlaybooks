@@ -1,0 +1,7 @@
+---
+- name: apt get update for server "{{ inventory_hostname }}"
+  apt:
+    upgrade: yes
+    update_cache: yes
+  become: true
+  become_method: sudo
