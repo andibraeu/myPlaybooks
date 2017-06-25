@@ -25,6 +25,7 @@
      - duplicity
      - monitoring-plugins
      - postfix
+     - htop
 
   - name: configure apticron
     become: true
