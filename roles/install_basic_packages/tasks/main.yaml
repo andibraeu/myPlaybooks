@@ -26,6 +26,7 @@
      - monitoring-plugins
      - postfix
      - htop
+     - vim
 
   - name: configure apticron
     become: true
