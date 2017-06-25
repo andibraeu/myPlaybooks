@@ -1,0 +1,41 @@
+---
+  - name: add neurodebian for Debian Jessie to use fail2ban with systemd
+    become: true
+    apt_repository:
+      repo: "{{ item }}"
+      state: present
+      filename: neurodebian
+    with_items:
+      - deb http://neurodebian.ovgu.de/debian data main
+      - deb http://neurodebian.ovgu.de/debian jessie main
+    when: ansible_distribution == 'Debian' and ansible_distribution_version|int >= 8 and ansible_distribution_version|int < 9
+
+  - name: install key for neurodebian
+    become: true
+    apt_key:
+      keyserver: hkp://pool.sks-keyservers.net:80
+      id: A5D32F012649A5A9
+
+  - name: Install packages
+    apt: name="{{ item }}" state=latest update_cache=yes
+    become: true
+    with_items:
+     - apticron
+     - fail2ban
+     - duplicity
+     - monitoring-plugins
+     - postfix
+
+  - name: configure apticron
+    become: true
+    template: src=files/apticron.conf dest=/etc/apticron/apticron.conf owner=root
+
+  - name: configure fail2ban
+    become: true
+    template: src=files/defaults-debian.conf dest=/etc/fail2ban/jail.d/defaults-debian.conf owner=root
+
+  - name: restart service fail2ban
+    become: true
+    systemd:
+      state: restarted
+      name: fail2ban

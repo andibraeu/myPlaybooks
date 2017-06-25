@@ -1,0 +1,7 @@
+---
+- name: basic setup sudo
+  hosts: new
+  vars:
+    user: "{{ user }}"
+  roles:
+  - install_basic_packages

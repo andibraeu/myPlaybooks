@@ -13,3 +13,4 @@
   - add_admin_user
   - copy_ssh_keys
   - install_oh_my_zsh
+  - install_basic_packages
