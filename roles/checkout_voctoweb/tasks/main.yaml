@@ -1,0 +1,11 @@
+---
+- name: checkout voctoweb from git
+  become: true
+  become_user: voctoweb
+  git:
+    repo: https://github.com/voc/voctoweb.git
+    dest: /home/voctoweb/voctoweb
+- debug:
+    msg:
+      - "Continue installing at the server: bundle install --path vendor/bundle"
+      - "aksjfhkhdasfk"

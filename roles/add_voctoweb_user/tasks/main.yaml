@@ -1,0 +1,7 @@
+---
+- name: add user voctoweb
+  become: true
+  user:
+    name: voctoweb
+    shell: /bin/zsh
+    state: present
