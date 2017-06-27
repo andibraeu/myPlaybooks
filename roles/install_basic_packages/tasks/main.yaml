@@ -27,6 +27,7 @@
      - postfix
      - htop
      - vim
+     - aptitude
 
   - name: configure apticron
     become: true
