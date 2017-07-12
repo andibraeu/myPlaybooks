@@ -22,6 +22,7 @@
     - automake
     - libtool
     - bison
+    - graphviz
 
 - name: install voctoweb packages from backports
   become: true
@@ -34,3 +35,5 @@
     - python-psycopg2
     - libpq-dev
     - openjdk-8-jre-headless
+    - nginx
+    - certbot  
