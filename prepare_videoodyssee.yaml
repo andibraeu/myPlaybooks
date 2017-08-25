@@ -1,0 +1,5 @@
+---
+- name: prepare videoodyssee (Debian 8)
+  hosts: videoodyssee
+  roles:
+  - install_patched_ffmpeg

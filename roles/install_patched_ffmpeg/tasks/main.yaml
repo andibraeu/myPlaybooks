@@ -1,0 +1,17 @@
+---
+- name: add repo key
+  become: true
+  apt_key:
+    url: "https://mng.ber.c3voc.de/debian/repo.key"
+    state: present
+    validate_certs: no
+
+- name: add repo
+  become: true
+  apt_repository: repo='deb http://mng.ber.c3voc.de/debian/ jessie main' state=present update_cache=yes
+
+- name: install ffmpeg
+  become: true
+  apt:
+    name: ffmpeg
+    state: present
