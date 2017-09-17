@@ -28,6 +28,7 @@
      - htop
      - vim
      - aptitude
+     - ntp
 
   - name: configure apticron
     become: true
