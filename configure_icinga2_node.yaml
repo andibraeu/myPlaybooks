@@ -1,0 +1,7 @@
+---
+- name: configure icinga2 node
+  hosts: all
+  become: true
+  roles:
+    - jnv.debian-backports
+    - install_and_configure_icinga2

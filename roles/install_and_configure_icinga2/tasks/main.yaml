@@ -1,0 +1,27 @@
+---
+- name: Install packages
+  apt: name="{{ item }}" state=latest update_cache=yes default_release={{ansible_distribution_release}}-backports
+  become: true
+  with_items:
+   - icinga2-common
+   - icinga2-bin
+   - icinga2
+   - nagios-plugins-contrib
+
+- name: configure icinga2
+  become: true
+  template: src=files/icinga2.conf dest=/etc/icinga2/icinga2.conf owner=root
+
+- name: copy registrations files for icinga2
+  become: true
+  template: src=files/register_icinga_node.sh dest=/tmp/register_icinga_node.sh owner=root mode=u+rwx
+
+- name: register icinga2 node
+  become: true
+  command: /tmp/register_icinga_node.sh
+
+- name: restart icinga2 service
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: icinga2
