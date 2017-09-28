@@ -7,6 +7,16 @@
    - icinga2-bin
    - icinga2
    - nagios-plugins-contrib
+  when: ansible_distribution == 'Debian' and ansible_distribution_version|int >= 8 and ansible_distribution_version|int < 9
+
+- name: Install packages
+  apt: name="{{ item }}" state=latest update_cache=yes default_release={{ansible_distribution_release}}-backports
+  become: true
+  with_items:
+  - libmodule-install-perl
+  - libarray-unique-perl
+  - libfile-slurp-perl
+  - libnumber-format-perl
 
 - name: configure icinga2
   become: true
@@ -19,6 +29,7 @@
 - name: register icinga2 node
   become: true
   command: /tmp/register_icinga_node.sh
+  when: icinga2_ticket_number is defined
 
 - name: restart icinga2 service
   systemd:
