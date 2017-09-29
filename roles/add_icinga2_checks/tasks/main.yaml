@@ -1,0 +1,51 @@
+---
+- name: Install packages
+  apt: name="{{ item }}" state=latest update_cache=yes default_release={{ansible_distribution_release}}-backports
+  become: true
+  with_items:
+  - libmodule-install-perl
+  - libarray-unique-perl
+  - libfile-slurp-perl
+  - libnumber-format-perl
+
+- name: copy checks
+  become: true
+  copy:
+    src: "{{ item }}"
+    dest: /usr/lib/nagios/plugins/
+    mode: +x
+  with_items:
+    - files/check_apache_status.pl
+
+- name: create local build directory
+  become: false
+  file:
+    path: "/home/{{ ansible_user }}/icinga_plugin_repos/"
+    state: directory
+    mode: 0755
+
+- name: checkout plugin repos
+  become: false
+  git:
+    repo: "https://github.com/matteocorti/{{ item }}.git"
+    dest: "/home/{{ ansible_user }}/icinga_plugin_repos/{{ item }}"
+  with_items:
+    - icinga2_plugins
+
+- name: prepare plugins
+  become: false
+  command: "perl /home/{{ ansible_user }}/icinga_plugin_repos/{{ item }}/Makefile.pl"
+
+- name: build plugins
+  become: false
+  make:
+    chdir: "/home/{{ ansible_user }}/icinga_plugin_repos/{{ item }}"
+  with_items:
+    - icinga2_plugins
+
+- name: install plugins
+  make:
+    chdir: "/home/{{ ansible_user }}/icinga_plugin_repos/{{ item }}"
+    target: install
+  with_items:
+    - icinga2_plugins
