@@ -1,7 +1,12 @@
 ---
 - name: configure icinga2 node
   hosts: all
+  vars:
+    icinga2_plugins:
+      - check_diskio
+      - check_tcptraffic
   become: true
   roles:
     - jnv.debian-backports
     - install_and_configure_icinga2
+    - add_icinga2_checks

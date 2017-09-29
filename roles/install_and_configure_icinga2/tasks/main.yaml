@@ -9,22 +9,15 @@
    - nagios-plugins-contrib
   when: ansible_distribution == 'Debian' and ansible_distribution_version|int >= 8 and ansible_distribution_version|int < 9
 
-- name: Install packages
-  apt: name="{{ item }}" state=latest update_cache=yes default_release={{ansible_distribution_release}}-backports
-  become: true
-  with_items:
-  - libmodule-install-perl
-  - libarray-unique-perl
-  - libfile-slurp-perl
-  - libnumber-format-perl
-
 - name: configure icinga2
   become: true
   template: src=files/icinga2.conf dest=/etc/icinga2/icinga2.conf owner=root
+  when: icinga2_ticket_number is defined
 
 - name: copy registrations files for icinga2
   become: true
   template: src=files/register_icinga_node.sh dest=/tmp/register_icinga_node.sh owner=root mode=u+rwx
+  when: icinga2_ticket_number is defined
 
 - name: register icinga2 node
   become: true
@@ -36,3 +29,4 @@
     state: restarted
     daemon_reload: yes
     name: icinga2
+  when: ansible_distribution == 'Debian' and ansible_distribution_version|int >= 8
