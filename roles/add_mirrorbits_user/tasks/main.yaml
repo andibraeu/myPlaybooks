@@ -1,0 +1,7 @@
+---
+- name: add user mirrorbits
+  become: true
+  user:
+    name: mirrorbits
+    shell: /bin/zsh
+    state: present

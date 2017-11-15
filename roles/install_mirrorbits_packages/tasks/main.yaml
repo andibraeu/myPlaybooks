@@ -1,0 +1,8 @@
+---
+- name: install mirrorbit packages
+  become: true
+  apt: name="{{ item }}" state=present
+  with_items:
+    - golang-go
+    - redis-server
+    - libgeoip-dev
