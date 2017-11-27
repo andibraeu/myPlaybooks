@@ -21,6 +21,7 @@
     become: true
     with_items:
      - apticron
+     - ca-certificates
      - fail2ban
      - duplicity
      - monitoring-plugins

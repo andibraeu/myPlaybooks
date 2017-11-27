@@ -8,3 +8,4 @@
     groups: sudo
     shell: /bin/zsh
     state: present
+  when: password is defined

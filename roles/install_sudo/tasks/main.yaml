@@ -1,8 +1,11 @@
 ---
+- stat: path=/usr/bin/sudo
+  register: sudo_file
+
 - name: install sudo + certificates
   become_method: su
   become: true
   apt: name="{{ item }}" state=latest update_cache=yes
   with_items:
    - sudo
-   - ca-certificates
+  when: sudo_file.stat.exists == false
