@@ -15,6 +15,7 @@
     apt_key:
       keyserver: hkp://pool.sks-keyservers.net:80
       id: A5D32F012649A5A9
+    when: ansible_distribution == 'Debian' and ansible_distribution_version|int >= 8 and ansible_distribution_version|int < 9
 
   - name: Install packages
     apt: name="{{ item }}" state=latest update_cache=yes

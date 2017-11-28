@@ -1,9 +1,9 @@
 ---
-- name: add user "{{ user }}"
+- name: add user "{{ my_user }}"
   become_method: su
   become: true
   user:
-    name: "{{ user }}"
+    name: "{{ my_user }}"
     password: "{{ password }}"
     groups: sudo
     shell: /bin/zsh

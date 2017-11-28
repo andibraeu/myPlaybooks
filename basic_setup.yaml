@@ -2,7 +2,7 @@
 - name: basic setup sudo
   hosts: new
   vars:
-    user: "{{ user }}"
+    my_user: "{{ my_user }}"
     pbname: $inventory_hostname
     distro: ${ansible_distribution}
     pkg_mgr: ${ansible_pkg_mgr}

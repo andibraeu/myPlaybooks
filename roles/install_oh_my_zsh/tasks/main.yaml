@@ -9,31 +9,31 @@
    - git-core
 
 - name: Clone oh-my-zsh repo
-  git: repo=https://github.com/robbyrussell/oh-my-zsh.git dest=/home/{{ user }}/.oh-my-zsh
+  git: repo=https://github.com/robbyrussell/oh-my-zsh.git dest=/home/{{ my_user }}/.oh-my-zsh
   become: true
   become_method: sudo
 
 - name: Create conf folder in home directory
-  file: path=/home/{{ user }}/conf/ state=directory owner={{ user }}
+  file: path=/home/{{ my_user }}/conf/ state=directory owner={{ my_user }}
   become: true
   become_method: sudo
 
 - name: deploy .zshrc
-  template: src=files/zshrc.in dest=/home/{{ user }}/conf/zshrc owner={{ user }}
+  template: src=files/zshrc.in dest=/home/{{ my_user }}/conf/zshrc owner={{ my_user }}
   become: true
   become_method: sudo
 
 - name: remove standard zshrc
-  file: path=/home/{{ user }}/.zshrc state=absent
+  file: path=/home/{{ my_user }}/.zshrc state=absent
   become: true
   become_method: sudo
 
 - name: symlink zshrc
-  file: path=/home/{{ user }}/.zshrc src=/home/{{ user }}/conf/zshrc state=link owner={{ user }}
+  file: path=/home/{{ my_user }}/.zshrc src=/home/{{ my_user }}/conf/zshrc state=link owner={{ my_user }}
   become: true
   become_method: sudo
 
 - name: Set zsh as default shell
-  user: name={{ user }} shell=/bin/zsh
+  user: name={{ my_user }} shell=/bin/zsh
   become: true
   become_method: sudo

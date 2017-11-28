@@ -7,13 +7,15 @@
   - libarray-unique-perl
   - libfile-slurp-perl
   - libnumber-format-perl
+  - liblist-moreutils-perl
+  - libmonitoring-plugin-perl
 
 - name: copy checks
   become: true
   copy:
     src: "{{ item }}"
     dest: /usr/lib/nagios/plugins/
-    mode: +x
+    mode: 0755
   with_items:
     - files/check_apache_status.pl
 
@@ -29,23 +31,31 @@
   git:
     repo: "https://github.com/matteocorti/{{ item }}.git"
     dest: "/home/{{ ansible_user }}/icinga_plugin_repos/{{ item }}"
-  with_items:
-    - icinga2_plugins
+    force: yes
+  with_items: "{{ icinga2_plugins }}"
+
+- name: cleanup repos
+  become: false
+  file:
+    state: absent
+    dest: "/home/{{ ansible_user }}/icinga_plugin_repos/{{ item }}/inc"
+  with_items: "{{ icinga2_plugins }}"
 
 - name: prepare plugins
   become: false
-  command: "perl /home/{{ ansible_user }}/icinga_plugin_repos/{{ item }}/Makefile.pl"
+  command: "perl Makefile.PL"
+  args:
+    chdir: "/home/{{ ansible_user }}/icinga_plugin_repos/{{ item }}"
+  with_items: "{{ icinga2_plugins }}"
 
 - name: build plugins
   become: false
   make:
     chdir: "/home/{{ ansible_user }}/icinga_plugin_repos/{{ item }}"
-  with_items:
-    - icinga2_plugins
+  with_items: "{{ icinga2_plugins }}"
 
 - name: install plugins
   make:
     chdir: "/home/{{ ansible_user }}/icinga_plugin_repos/{{ item }}"
     target: install
-  with_items:
-    - icinga2_plugins
+  with_items: "{{ icinga2_plugins}}"
