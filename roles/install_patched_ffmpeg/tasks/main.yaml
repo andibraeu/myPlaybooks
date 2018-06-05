@@ -1,18 +1,19 @@
 ---
-- name: add repo key
-  become: true
-  apt_key:
-    url: "https://mng.ber.c3voc.de/debian/repo.key"
-    state: present
-    validate_certs: no
-
 # you also need to set non-free for the debian repos!
 - name: add repo
   become: true
-  apt_repository: repo='deb http://mng.ber.c3voc.de/debian/ jessie main' state=present update_cache=yes
+  apt_repository: repo='deb http://www.deb-multimedia.org stretch main non-free' state=present update_cache=yes
 
-- name: install ffmpeg
+- name: install ffmpeg preconditions
   become: true
   apt:
-    name: ffmpeg
+    name: "{{ item  }}"
     state: present
+    update_cache: yes
+  with_items:
+    - deb-multimedia-keyring
+    - libass-dev
+    - libfaac-dev
+    - libfdk-aac-dev
+    - libopus-dev
+
