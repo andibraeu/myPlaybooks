@@ -1,11 +1,6 @@
 ---
-<<<<<<< HEAD
 - name: copy ssh keys for "{{ user }}"
   become_method: sudo
-=======
-- name: copy ssh keys for "{{ my_user }}"
-  become_method: su
->>>>>>> 5882fe239b13e2f1e70d5e5421ea7b16c4932a7a
   become: true
   authorized_key:
     user: "{{ my_user }}"
