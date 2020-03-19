@@ -1,14 +1,12 @@
 ---
 - name: Install packages
-  apt: name="{{ item }}" state=latest update_cache=yes default_release={{ansible_distribution_release}}-backports
+  apt: 
+    name: ['build-essential', 'libmodule-install-perl', 'libarray-unique-perl', 'libfile-slurp-perl', 'libnumber-format-perl', 'liblist-moreutils-perl', 'libmonitoring-plugin-perl']
+    state: latest 
+    update_cache: yes 
+    default_release: "{{ansible_distribution_release}}-backports"
   become: true
-  with_items:
-  - libmodule-install-perl
-  - libarray-unique-perl
-  - libfile-slurp-perl
-  - libnumber-format-perl
-  - liblist-moreutils-perl
-  - libmonitoring-plugin-perl
+  
 
 - name: copy checks
   become: true
