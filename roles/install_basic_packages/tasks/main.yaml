@@ -18,19 +18,11 @@
     when: ansible_distribution == 'Debian' and ansible_distribution_version|int >= 8 and ansible_distribution_version|int < 9
 
   - name: Install packages
-    apt: name="{{ item }}" state=latest update_cache=yes
+    apt: 
+      name: ['apticron', 'ca-certificates', 'fail2ban', 'duplicity', 'monitoring-plugins', 'postfix', 'htop', 'vim', 'aptitude', 'ntp']
+      state: latest
+      update_cache: yes
     become: true
-    with_items:
-     - apticron
-     - ca-certificates
-     - fail2ban
-     - duplicity
-     - monitoring-plugins
-     - postfix
-     - htop
-     - vim
-     - aptitude
-     - ntp
 
   - name: configure apticron
     become: true

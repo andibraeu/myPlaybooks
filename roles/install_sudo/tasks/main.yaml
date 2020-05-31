@@ -5,7 +5,8 @@
 - name: install sudo + certificates
   become_method: su
   become: true
-  apt: name="{{ item }}" state=latest update_cache=yes
-  with_items:
-   - sudo
+  apt: 
+    name: sudo 
+    state: latest 
+    update_cache: yes
   when: sudo_file.stat.exists == false

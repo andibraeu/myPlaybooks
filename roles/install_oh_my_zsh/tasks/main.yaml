@@ -1,12 +1,11 @@
 ---
 - name: Install git and zsh
-  apt: name="{{ item }}" state=latest update_cache=yes
+  apt: 
+    name: ['git', 'zsh', 'git-core']
+    state: latest
+    update_cache: yes
   become: true
   become_method: sudo
-  with_items:
-   - git
-   - zsh
-   - git-core
 
 - name: Clone oh-my-zsh repo
   git: repo=https://github.com/robbyrussell/oh-my-zsh.git dest=/home/{{ my_user }}/.oh-my-zsh
