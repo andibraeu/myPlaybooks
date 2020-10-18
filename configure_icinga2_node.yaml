@@ -7,6 +7,6 @@
       - check_tcptraffic
   become: true
   roles:
-    - jnv.debian-backports
+    # - jnv.debian-backports
     - install_and_configure_icinga2
     - add_icinga2_checks
