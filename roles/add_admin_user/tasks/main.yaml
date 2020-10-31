@@ -1,6 +1,6 @@
 ---
 - name: add user "{{ my_user }}"
-  become_method: su
+  become_method: sudo
   become: true
   user:
     name: "{{ my_user }}"
