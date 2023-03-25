@@ -1,7 +1,7 @@
 ---
 - name: Install git and zsh
   apt: 
-    name: ['git', 'zsh', 'git-core']
+    name: ['git', 'zsh']
     state: latest
     update_cache: yes
   become: true
