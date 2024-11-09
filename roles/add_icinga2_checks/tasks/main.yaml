@@ -57,3 +57,9 @@
     chdir: "/home/{{ ansible_user }}/icinga_plugin_repos/{{ item }}"
     target: install
   with_items: "{{ icinga2_plugins}}"
+
+- name: Create a symbolic link for tcptraffic
+  file:
+    src: /usr/lib/nagios/plugins/contrib/check_traffic
+    dest: /usr/lib/nagios/plugins/contrib/check_tcptraffic
+    state: link
