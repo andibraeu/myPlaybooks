@@ -1,0 +1,73 @@
+---
+# Default variables for UFW role
+
+# Network settings
+ufw_allow_home_network: true
+ufw_home_network: "10.64.32.0/24"
+ufw_blocked_ports:
+  - 8095
+
+# K3s specific networks
+k3s_pod_network: "10.42.0.0/16"
+k3s_service_network: "10.43.0.0/16"
+
+# Port group definitions
+ufw_port_groups:
+  - name: kubernetes
+    ports:
+      - { port: 6443 }        # Kubernetes API Server
+      - { port: 6444 }        # K3s API Server
+      - { port: '2379:2380' } # etcd
+      - { port: 10250 }       # Kubelet API
+      - { port: 10251 }       # kube-scheduler
+      - { port: 10252 }       # kube-controller-manager
+      - { port: 10255 }       # Read-only Kubelet API
+      - { port: '30000:32767' } # NodePort Services
+      - { port: 10257 }       # kube-controller-manager (metrics)
+      - { port: 10259 }       # kube-scheduler (metrics)
+      - { port: 9099 }        # calico metrics
+      - { port: 9100 }        # prometheus node-exporter
+  
+  - name: system
+    ports:
+      - { port: 22 }
+      - { port: 53, proto: any }
+      - { port: 123, proto: udp }
+      - { port: 7946 }
+      - { port: 8472, proto: udp }
+      - { port: 9100 }
+  
+  - name: web
+    ports:
+      - { port: 80 }
+      - { port: 443 }
+  
+  - name: longhorn
+    ports:
+      - { port: 9500 }    # Longhorn Manager API
+      - { port: 9501 }    # Backup & Restore
+      - { port: 9502 }    # CSI
+      - { port: 9503 }    # Instance Manager
+      - { port: 9504 }    # Recovery Backend
+      - { port: 31000 }   # NodePort UI Default
+      - { port: 8000 }    # UI (wenn über NodePort exponiert)
+      - { port: 18080 }   # CSI Driver
+  
+  - name: iscsi
+    ports:
+      - { port: 3260 }    # iSCSI Target
+      - { port: 860 }     # iSCSI SCSI Target Port
+      - { port: '5800:5810' } # VNC für mögliche Longhorn-Instanzen
+  
+  - name: home_automation
+    ports:
+      - { port: 5353, proto: udp }
+      - { port: 51827 }
+      - { port: 1900, proto: udp }
+      - { port: 2100 }
+      - { port: 8123 }
+      - { port: 1883 }
+      - { port: 8883 }
+      - { port: 2001 }
+      - { port: 2010 }
+      - { port: 9292 } 

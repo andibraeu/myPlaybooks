@@ -1,0 +1,7 @@
+---
+- name: "Configure UFW rules for {{ port_group.name }} ports"
+  ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto | default('tcp') }}"
+  loop: "{{ port_group.ports }}" 

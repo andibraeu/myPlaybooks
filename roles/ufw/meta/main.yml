@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: Andreas Bräu
+  description: Configure UFW firewall
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy
+        - noble
+  galaxy_tags:
+    - firewall
+    - security
+    - ufw
+
+dependencies: [] 

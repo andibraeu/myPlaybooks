@@ -1,0 +1,19 @@
+---
+- name: Configure UFW
+  hosts: s54-k3s
+  become: yes
+  gather_facts: yes
+
+  pre_tasks:
+    - name: Check if Ubuntu version meets requirement
+      assert:
+        that:
+          - ansible_distribution == 'Ubuntu'
+          - ansible_distribution_version is version('22.04', '>=')
+        msg: "This playbook requires Ubuntu 22.04 or newer"
+      when: not ansible_check_mode
+
+  roles:
+    - role: ufw
+      # Keine vars überschreiben, damit die Standardwerte aus defaults/main.yml verwendet werden
+      # Falls benutzerdefinierte Werte benötigt werden, diese in group_vars oder host_vars definieren 

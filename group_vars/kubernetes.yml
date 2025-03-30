@@ -1,0 +1,33 @@
+---
+# Custom UFW Configuration for Kubernetes Nodes
+
+# Beispiel für benutzerdefinierte Portgruppen (Kommentar entfernen zum Aktivieren)
+# ufw_custom_port_groups:
+#   - name: kubernetes
+#     ports:
+#       - { port: 6443 }
+#       - { port: 6444 }
+#       - { port: '2379:2380' }
+#       - { port: 10250 }
+#       - { port: 10251 }
+#       - { port: 10252 }
+#       - { port: 10255 }
+#       - { port: '30000:32767' }
+#   
+#   - name: system
+#     ports:
+#       - { port: 22 }
+#       - { port: 53, proto: any }
+#
+#   - name: custom_app
+#     ports:
+#       - { port: 8080 }
+#       - { port: 9090 }
+
+# Beispiel für benutzerdefiniertes Heimnetzwerk
+# ufw_custom_home_network: "192.168.1.0/24"
+
+# Beispiel für benutzerdefinierte blockierte Ports
+# ufw_custom_blocked_ports:
+#   - 8095
+#   - 8096 
