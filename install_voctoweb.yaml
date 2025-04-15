@@ -6,13 +6,12 @@
   - install_voctoweb_packages
   - add_voctoweb_user
   # install role via ansible-galaxy install rvm_io.ruby
-  - { role: rvm_io.ruby,
-        tags: ruby,
-        rvm1_rubies: ['ruby-2.3.1'],
-        rvm1_install_flags: '--auto-dotfiles',     # Remove --user-install from defaults
-        rvm1_install_path: /usr/local/rvm,         # Set to system location
-        rvm1_user: root,
-        become: yes
-      }
+  - role: rvm_io.ruby.ruby
+    tags: ruby
+    rvm1_rubies: ['ruby-2.3.1']
+    rvm1_install_flags: '--auto-dotfiles'     # Remove --user-install from defaults
+    rvm1_install_path: /usr/local/rvm         # Set to system location
+    rvm1_user: root
+    become: yes
   - configure_postgresql
   - checkout_voctoweb

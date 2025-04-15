@@ -1,6 +1,6 @@
 ---
 - name: install mirrorbit packages
   become: true
-  apt: 
+  ansible.builtin.apt: 
     name: ['golang-go', 'redis-server', 'libgeoip-dev']
     state: present

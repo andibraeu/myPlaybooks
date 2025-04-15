@@ -1,6 +1,6 @@
 ---
 - name: Install packages
-  apt: 
+  ansible.builtin.apt: 
     name: ['build-essential', 'libmodule-install-perl', 'libarray-unique-perl', 'libfile-slurp-perl', 'libnumber-format-perl', 'liblist-moreutils-perl', 'libmonitoring-plugin-perl']
     state: latest 
     update_cache: yes 
@@ -10,7 +10,7 @@
 
 - name: copy checks
   become: true
-  copy:
+  ansible.builtin.copy:
     src: "{{ item }}"
     dest: /usr/lib/nagios/plugins/
     mode: 0755
@@ -19,14 +19,14 @@
 
 - name: create local build directory
   become: false
-  file:
+  ansible.builtin.file:
     path: "/home/{{ ansible_user }}/icinga_plugin_repos/"
     state: directory
     mode: 0755
 
 - name: checkout plugin repos
   become: false
-  git:
+  ansible.builtin.git:
     repo: "https://github.com/matteocorti/{{ item }}.git"
     dest: "/home/{{ ansible_user }}/icinga_plugin_repos/{{ item }}"
     force: yes
@@ -34,32 +34,32 @@
 
 - name: cleanup repos
   become: false
-  file:
+  ansible.builtin.file:
     state: absent
     dest: "/home/{{ ansible_user }}/icinga_plugin_repos/{{ item }}/inc"
   with_items: "{{ icinga2_plugins }}"
 
 - name: prepare plugins
   become: false
-  command: "perl Makefile.PL"
+  ansible.builtin.command: "perl Makefile.PL"
   args:
     chdir: "/home/{{ ansible_user }}/icinga_plugin_repos/{{ item }}"
   with_items: "{{ icinga2_plugins }}"
 
 - name: build plugins
   become: false
-  make:
+  community.general.make:
     chdir: "/home/{{ ansible_user }}/icinga_plugin_repos/{{ item }}"
   with_items: "{{ icinga2_plugins }}"
 
 - name: install plugins
-  make:
+  community.general.make:
     chdir: "/home/{{ ansible_user }}/icinga_plugin_repos/{{ item }}"
     target: install
   with_items: "{{ icinga2_plugins}}"
 
 - name: Create a symbolic link for tcptraffic
-  file:
+  ansible.builtin.file:
     src: /usr/lib/nagios/plugins/contrib/check_traffic
     dest: /usr/lib/nagios/plugins/contrib/check_tcptraffic
     state: link

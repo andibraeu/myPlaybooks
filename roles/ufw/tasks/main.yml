@@ -1,15 +1,15 @@
 ---
 - name: Install UFW
-  apt:
+  ansible.builtin.apt:
     name: ufw
     state: present
 
 - name: Reset UFW
-  ufw:
+  community.general.ufw:
     state: reset
 
 - name: Set default policies
-  ufw:
+  community.general.ufw:
     direction: "{{ item.direction }}"
     policy: "{{ item.policy }}"
   loop:
@@ -17,17 +17,17 @@
     - { direction: 'outgoing', policy: 'allow' }
 
 - name: Check if K3s is installed
-  stat:
+  ansible.builtin.stat:
     path: /usr/local/bin/k3s
   register: k3s_binary
 
 - name: Check if K3s service is running
-  service_facts:
+  ansible.builtin.service_facts:
   register: service_state
 
 # Ensure that UFW doesn't interfere with K3s iptables rules
 - name: Configure UFW to allow iptables forwarding
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/default/ufw
     regexp: '^DEFAULT_FORWARD_POLICY'
     line: 'DEFAULT_FORWARD_POLICY="ACCEPT"'
@@ -38,7 +38,7 @@
 
 # Ensure that UFW doesn't filter forwarded packets (let K3s handle them)
 - name: Configure UFW to not filter forwarded packets
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/ufw/sysctl.conf
     regexp: "{{ item.regexp }}"
     line: "{{ item.line }}"
@@ -52,7 +52,7 @@
      service_state.ansible_facts.services['k3s.service'].state == 'running')
 
 - name: Allow all traffic between Kubernetes cluster hosts
-  ufw:
+  community.general.ufw:
     rule: allow
     from_ip: "{{ hostvars[item]['ansible_default_ipv4']['address'] | default(hostvars[item]['ansible_host']) }}"
   with_items: "{{ groups['s54-k3s'] | default([]) }}"
@@ -63,7 +63,7 @@
     groups['s54-k3s'] is defined and groups['s54-k3s'] | length > 0
 
 - name: Allow all traffic on container network interfaces
-  ufw:
+  community.general.ufw:
     rule: allow
     interface: "{{ item }}"
     direction: in
@@ -84,7 +84,7 @@
      service_state.ansible_facts.services['k3s.service'].state == 'running')
 
 - name: Allow K3s Pod and Service network traffic (including blocked ports for internal communication)
-  ufw:
+  community.general.ufw:
     rule: allow
     from_ip: "{{ item }}"
   loop:
@@ -97,14 +97,14 @@
      
 # Now block specific ports for external access
 - name: Block specific ports for external access (but not for internal K8s traffic)
-  ufw:
+  community.general.ufw:
     rule: deny
     port: "{{ item }}"
   loop: "{{ ufw_blocked_ports | default([]) }}"
   when: ufw_blocked_ports is defined and ufw_blocked_ports | length > 0
 
 - name: Allow Calico overlay network traffic
-  ufw:
+  community.general.ufw:
     rule: allow
     proto: "{{ item.proto }}"
     port: "{{ item.port | default('') }}"
@@ -122,13 +122,13 @@
      service_state.ansible_facts.services['k3s.service'].state == 'running')
 
 - name: Configure UFW rules for predefined groups
-  include_tasks: configure_port_group.yml
+  ansible.builtin.include_tasks: configure_port_group.yml
   loop: "{{ ufw_port_groups | default([]) }}"
   loop_control:
     loop_var: port_group
 
 - name: Allow UDP protocol on ports used by Kubernetes services
-  ufw:
+  community.general.ufw:
     rule: allow
     proto: udp
     port: "{{ item }}"
@@ -142,11 +142,11 @@
      service_state.ansible_facts.services['k3s.service'].state == 'running')
 
 - name: Allow home network access (all ports except those explicitly blocked above)
-  ufw:
+  community.general.ufw:
     rule: allow
     from_ip: "{{ ufw_home_network | default('10.64.32.0/24') }}"
   when: ufw_allow_home_network | default(true)
 
 - name: Enable UFW
-  ufw:
+  community.general.ufw:
     state: enabled 

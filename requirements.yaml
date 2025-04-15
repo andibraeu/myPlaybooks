@@ -1,3 +1,9 @@
-- src: jnv.debian-backports
+---
+collections:
+  - name: rvm_io.ruby
+  - name: community.general
+  - name: ansible.posix
+  - name: community.postgresql
 
-- src: rvm_io.ruby
+roles:
+  - name: jnv.debian-backports

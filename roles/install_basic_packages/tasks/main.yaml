@@ -1,6 +1,6 @@
 ---
   - name: Install packages
-    apt: 
+    ansible.builtin.apt: 
       name: ['apticron', 'ca-certificates', 'fail2ban', 'duplicity', 'monitoring-plugins', 'postfix', 'htop', 'vim', 'aptitude', 'ntp']
       state: latest
       update_cache: yes
@@ -8,14 +8,20 @@
 
   - name: configure apticron
     become: true
-    template: src=files/apticron.conf dest=/etc/apticron/apticron.conf owner=root
+    ansible.builtin.template: 
+      src: files/apticron.conf 
+      dest: /etc/apticron/apticron.conf 
+      owner: root
 
   - name: configure fail2ban
     become: true
-    template: src=files/defaults-debian.conf dest=/etc/fail2ban/jail.d/defaults-debian.conf owner=root
+    ansible.builtin.template: 
+      src: files/defaults-debian.conf 
+      dest: /etc/fail2ban/jail.d/defaults-debian.conf 
+      owner: root
 
   - name: restart service fail2ban
     become: true
-    systemd:
+    ansible.builtin.systemd:
       state: restarted
       name: fail2ban

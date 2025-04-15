@@ -1,11 +1,13 @@
 ---
-- stat: path=/usr/bin/sudo
+- name: Check if sudo is installed
+  ansible.builtin.stat: 
+    path: /usr/bin/sudo
   register: sudo_file
 
 - name: install sudo + certificates
   become_method: su
   become: true
-  apt: 
+  ansible.builtin.apt: 
     name: sudo 
     state: latest 
     update_cache: yes

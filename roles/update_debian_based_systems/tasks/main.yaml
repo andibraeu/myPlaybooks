@@ -1,6 +1,6 @@
 ---
 - name: apt get update for server "{{ inventory_hostname }}"
-  apt:
+  ansible.builtin.apt:
     upgrade: yes
     update_cache: yes
   become: true

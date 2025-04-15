@@ -2,11 +2,14 @@
 # you also need to set non-free for the debian repos!
 - name: add repo
   become: true
-  apt_repository: repo='deb http://www.deb-multimedia.org stretch main non-free' state=present update_cache=yes
+  ansible.builtin.apt_repository: 
+    repo: 'deb http://www.deb-multimedia.org stretch main non-free' 
+    state: present 
+    update_cache: yes
 
 - name: install ffmpeg preconditions
   become: true
-  apt:
+  ansible.builtin.apt:
     name: "{{ item  }}"
     state: present
     update_cache: yes

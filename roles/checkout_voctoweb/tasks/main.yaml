@@ -2,10 +2,11 @@
 - name: checkout voctoweb from git
   become: true
   become_user: voctoweb
-  git:
+  ansible.builtin.git:
     repo: https://github.com/voc/voctoweb.git
     dest: /home/voctoweb/voctoweb
-- debug:
+- name: Debug installation instructions
+  ansible.builtin.debug:
     msg:
       - "Continue installing at the server: bundle install --path vendor/bundle"
       - "2nd line"

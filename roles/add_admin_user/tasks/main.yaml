@@ -2,7 +2,7 @@
 - name: add user "{{ my_user }}"
   become_method: sudo
   become: true
-  user:
+  ansible.builtin.user:
     name: "{{ my_user }}"
     password: "{{ password }}"
     groups: sudo

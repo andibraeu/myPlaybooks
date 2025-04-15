@@ -2,6 +2,6 @@
 - name: copy ssh keys for "{{ user }}"
   become_method: sudo
   become: true
-  authorized_key:
+  ansible.posix.authorized_key:
     user: "{{ my_user }}"
     key: "{{ ssh_keys }}"

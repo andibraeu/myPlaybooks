@@ -2,7 +2,7 @@
 - name: Configure postgresql for voctoweb
   become: true
   become_user: postgres
-  postgresql_user:
+  community.postgresql.postgresql_user:
     name: media
     password: "{{ vault_voctoweb_postgres_pw }}"
     role_attr_flags: CREATEDB

@@ -1,6 +1,6 @@
 ---
 - name: Install git and zsh
-  apt: 
+  ansible.builtin.apt: 
     name: ['git', 'zsh']
     state: latest
     update_cache: yes
@@ -8,31 +8,47 @@
   become_method: sudo
 
 - name: Clone oh-my-zsh repo
-  git: repo=https://github.com/robbyrussell/oh-my-zsh.git dest=/home/{{ my_user }}/.oh-my-zsh
+  ansible.builtin.git: 
+    repo: https://github.com/robbyrussell/oh-my-zsh.git 
+    dest: /home/{{ my_user }}/.oh-my-zsh
   become: true
   become_method: sudo
 
 - name: Create conf folder in home directory
-  file: path=/home/{{ my_user }}/conf/ state=directory owner={{ my_user }}
+  ansible.builtin.file: 
+    path: /home/{{ my_user }}/conf/ 
+    state: directory 
+    owner: "{{ my_user }}"
   become: true
   become_method: sudo
 
 - name: deploy .zshrc
-  template: src=files/zshrc.in dest=/home/{{ my_user }}/conf/zshrc owner={{ my_user }}
+  ansible.builtin.template: 
+    src: files/zshrc.in 
+    dest: /home/{{ my_user }}/conf/zshrc 
+    owner: "{{ my_user }}"
   become: true
   become_method: sudo
 
 - name: remove standard zshrc
-  file: path=/home/{{ my_user }}/.zshrc state=absent
+  ansible.builtin.file: 
+    path: /home/{{ my_user }}/.zshrc 
+    state: absent
   become: true
   become_method: sudo
 
 - name: symlink zshrc
-  file: path=/home/{{ my_user }}/.zshrc src=/home/{{ my_user }}/conf/zshrc state=link owner={{ my_user }}
+  ansible.builtin.file: 
+    path: /home/{{ my_user }}/.zshrc 
+    src: /home/{{ my_user }}/conf/zshrc 
+    state: link 
+    owner: "{{ my_user }}"
   become: true
   become_method: sudo
 
 - name: Set zsh as default shell
-  user: name={{ my_user }} shell=/bin/zsh
+  ansible.builtin.user: 
+    name: "{{ my_user }}" 
+    shell: /bin/zsh
   become: true
   become_method: sudo
