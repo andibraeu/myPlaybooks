@@ -1,0 +1,21 @@
+[DEFAULT]
+ignoreip = {{ fail2ban_ignoreip }}
+bantime = {{ fail2ban_bantime }}
+findtime = {{ fail2ban_findtime }}
+maxretry = {{ fail2ban_maxretry }}
+backend = {{ fail2ban_backend }}
+action = %(action_mw)s
+
+destemail = {{ fail2ban_email }}
+
+sender = {{ fail2ban_sender }}
+
+mta = sendmail
+
+[sshd]
+backend = systemd
+enabled = true
+bantime = 1800
+
+[recidive]
+enabled = true 

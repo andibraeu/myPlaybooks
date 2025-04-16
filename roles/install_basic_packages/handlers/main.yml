@@ -1,0 +1,13 @@
+---
+- name: Restart apticron
+  ansible.builtin.service:
+    name: apticron
+    state: restarted
+  become: true
+  ignore_errors: true
+
+- name: Restart fail2ban
+  ansible.builtin.systemd:
+    name: fail2ban
+    state: restarted
+  become: true 

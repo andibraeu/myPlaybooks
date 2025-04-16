@@ -1,0 +1,22 @@
+---
+# Distribution-specific variables
+debian_specific_packages:
+  - debian-goodies
+  - apt-listchanges
+
+ubuntu_specific_packages:
+  - ubuntu-standard
+  - unattended-upgrades
+
+# System paths
+apticron_conf_path: /etc/apticron/apticron.conf
+fail2ban_conf_path: /etc/fail2ban/jail.d/defaults-debian.conf
+
+# Chezmoi paths and configuration
+chezmoi_bin_path: /usr/bin/chezmoi
+chezmoi_config_dir: "/home/{{ chezmoi_user }}/.config/chezmoi"
+chezmoi_base_url: "https://github.com/twpayne/chezmoi/releases"
+chezmoi_download_dir: "/home/{{ ansible_user }}/chezmoi-install"
+
+# Checksums file information
+chezmoi_checksums_url: "{{ chezmoi_base_url }}/download/v{{ release_version }}/chezmoi_{{ release_version }}_checksums.txt" 

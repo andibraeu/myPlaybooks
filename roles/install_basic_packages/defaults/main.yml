@@ -1,0 +1,44 @@
+---
+# Default packages to install
+base_packages:
+  - apticron
+  - ca-certificates
+  - fail2ban
+  - duplicity
+  - duply
+  - monitoring-plugins
+  - postfix
+  - htop
+  - vim
+  - aptitude
+  - ntp
+  - curl
+  - zsh
+  - git
+  - gnupg
+  - lsd
+
+# Chezmoi configuration
+chezmoi_install: true
+chezmoi_repo: "https://github.com/andibraeu/dotfiles.git"
+chezmoi_apply: true
+chezmoi_user: "{{ my_user }}"
+chezmoi_verify_signature: true
+chezmoi_version: "latest"  # Specify version or "latest"
+
+# Apticron configuration
+apticron_email: root
+apticron_diff_only: "1"
+apticron_listchanges_profile: "mail"
+apticron_notify_holds: "0"
+apticron_notify_new: "1"
+apticron_notify_no_updates: "0"
+
+# Fail2ban configuration
+fail2ban_ignoreip: "127.0.0.1/8 ::1"
+fail2ban_bantime: "10m"
+fail2ban_findtime: "10m"
+fail2ban_maxretry: "5"
+fail2ban_backend: "auto"
+fail2ban_email: root
+fail2ban_sender: root@localhost 

@@ -1,27 +1,167 @@
 ---
-  - name: Install packages
-    ansible.builtin.apt: 
-      name: ['apticron', 'ca-certificates', 'fail2ban', 'duplicity', 'monitoring-plugins', 'postfix', 'htop', 'vim', 'aptitude', 'ntp']
-      state: latest
-      update_cache: yes
-    become: true
+- name: Install base packages
+  ansible.builtin.apt: 
+    name: "{{ base_packages }}"
+    state: latest
+    update_cache: yes
+  become: true
 
-  - name: configure apticron
-    become: true
-    ansible.builtin.template: 
-      src: files/apticron.conf 
-      dest: /etc/apticron/apticron.conf 
-      owner: root
+- name: Install Debian-specific packages
+  ansible.builtin.apt:
+    name: "{{ debian_specific_packages }}"
+    state: latest
+  become: true
+  when: ansible_distribution == 'Debian'
 
-  - name: configure fail2ban
-    become: true
-    ansible.builtin.template: 
-      src: files/defaults-debian.conf 
-      dest: /etc/fail2ban/jail.d/defaults-debian.conf 
-      owner: root
+- name: Install Ubuntu-specific packages
+  ansible.builtin.apt:
+    name: "{{ ubuntu_specific_packages }}"
+    state: latest
+  become: true
+  when: ansible_distribution == 'Ubuntu'
 
-  - name: restart service fail2ban
-    become: true
-    ansible.builtin.systemd:
-      state: restarted
-      name: fail2ban
+- name: Configure apticron
+  ansible.builtin.template: 
+    src: apticron.conf.j2
+    dest: "{{ apticron_conf_path }}"
+    owner: root
+  become: true
+  notify: Restart apticron
+
+- name: Configure fail2ban
+  ansible.builtin.template: 
+    src: defaults-debian.conf.j2
+    dest: "{{ fail2ban_conf_path }}"
+    owner: root
+  become: true
+  notify: Restart fail2ban
+
+# Chezmoi installation and setup
+- name: Check if chezmoi is already installed
+  ansible.builtin.stat:
+    path: "{{ chezmoi_bin_path }}"
+  register: chezmoi_binary
+  become: true
+  when: chezmoi_install | bool
+
+- name: Create temporary download directory
+  ansible.builtin.file:
+    path: "/tmp/chezmoi-install"
+    state: directory
+    mode: '0755'
+  become: true
+  when: 
+    - chezmoi_install | bool
+    - not chezmoi_binary.stat.exists | default(false)
+
+- name: Get latest release version
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/twpayne/chezmoi/releases/latest
+    return_content: true
+  register: latest_release
+  when: 
+    - chezmoi_install | bool
+    - not chezmoi_binary.stat.exists | default(false)
+    - chezmoi_version == "latest"
+
+- name: Set release version
+  ansible.builtin.set_fact:
+    release_version: "{{ latest_release.json.tag_name | regex_replace('^v', '') if chezmoi_version == 'latest' else chezmoi_version }}"
+  when: 
+    - chezmoi_install | bool
+    - not chezmoi_binary.stat.exists | default(false)
+
+- name: Set architecture fact
+  ansible.builtin.set_fact:
+    deb_architecture: "{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
+  when:
+    - chezmoi_install | bool
+    - not chezmoi_binary.stat.exists | default(false)
+
+- name: Set package filename
+  ansible.builtin.set_fact:
+    chezmoi_deb_filename: "chezmoi_{{ release_version }}_{{ ansible_system | lower }}_{{ deb_architecture }}.deb"
+  when:
+    - chezmoi_install | bool
+    - not chezmoi_binary.stat.exists | default(false)
+
+# Download Debian package and verify
+- name: Download chezmoi Debian package
+  ansible.builtin.get_url:
+    url: "{{ chezmoi_base_url }}/download/v{{ release_version }}/{{ chezmoi_deb_filename }}"
+    dest: "/tmp/chezmoi-install/{{ chezmoi_deb_filename }}"
+  become: true
+  when: 
+    - chezmoi_install | bool
+    - not chezmoi_binary.stat.exists | default(false)
+
+- name: Download checksums file
+  ansible.builtin.get_url:
+    url: "{{ chezmoi_checksums_url }}"
+    dest: "/tmp/chezmoi-install/chezmoi_{{ release_version }}_checksums.txt"
+  become: true
+  when:
+    - chezmoi_install | bool
+    - chezmoi_verify_signature | bool
+    - not chezmoi_binary.stat.exists | default(false)
+
+- name: Verify package checksum
+  ansible.builtin.shell: |
+    cd /tmp/chezmoi-install && \
+    sha256sum --check chezmoi_{{ release_version }}_checksums.txt --ignore-missing
+  register: checksum_verify
+  become: true
+  failed_when: 
+    - checksum_verify.rc != 0
+    - "'OK' not in checksum_verify.stdout"
+  when:
+    - chezmoi_install | bool
+    - chezmoi_verify_signature | bool
+    - not chezmoi_binary.stat.exists | default(false)
+
+- name: Install chezmoi Debian package
+  ansible.builtin.apt:
+    deb: "/tmp/chezmoi-install/{{ chezmoi_deb_filename }}"
+  become: true
+  when:
+    - chezmoi_install | bool
+    - not chezmoi_binary.stat.exists | default(false)
+
+- name: Clean up download directory
+  ansible.builtin.file:
+    path: "/tmp/chezmoi-install"
+    state: absent
+  become: true
+  when:
+    - chezmoi_install | bool
+    - not chezmoi_binary.stat.exists | default(false)
+
+# Erstelle das Konfigurationsverzeichnis mit den richtigen Rechten
+- name: Ensure chezmoi config directory exists
+  ansible.builtin.file:
+    path: "{{ chezmoi_config_dir }}"
+    state: directory
+    owner: "{{ chezmoi_user }}"
+    group: "{{ chezmoi_user }}"
+    mode: '0755'
+  become: true
+  when: 
+    - chezmoi_install | bool
+    - chezmoi_apply | bool
+
+# Verwende das su-Modul, um Befehle als chezmoi_user auszuführen
+- name: Initialize chezmoi with user's dotfiles repo
+  ansible.builtin.command: "su - {{ chezmoi_user }} -c 'chezmoi init {{ chezmoi_repo }}'"
+  become: true
+  args:
+    creates: "{{ chezmoi_config_dir }}/chezmoi.yaml"
+  when:
+    - chezmoi_install | bool
+    - chezmoi_apply | bool
+
+- name: Apply chezmoi dotfiles
+  ansible.builtin.command: "su - {{ chezmoi_user }} -c 'chezmoi apply'"
+  become: true
+  when:
+    - chezmoi_install | bool
+    - chezmoi_apply | bool

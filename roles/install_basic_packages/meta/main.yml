@@ -1,0 +1,28 @@
+---
+galaxy_info:
+  author: abraeu
+  description: Installs and configures basic system packages and services, including dotfiles management with chezmoi
+  company: ""
+  license: "MIT"
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Debian
+      versions:
+        - buster
+        - bullseye
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+  galaxy_tags:
+    - system
+    - packages
+    - security
+    - dotfiles
+    - chezmoi
+
+dependencies: []
+  # Example dependency:
+  # - role: common
+  #   vars:
+  #     some_parameter: value 
