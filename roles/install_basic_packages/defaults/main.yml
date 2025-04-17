@@ -16,6 +16,9 @@ base_packages:
   - zsh
   - git
   - gnupg
+
+# Optional packages that may not be available on all distributions
+optional_packages:
   - lsd
 
 # Chezmoi configuration

@@ -6,6 +6,21 @@
     update_cache: yes
   become: true
 
+- name: Install optional packages (continue on error)
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: latest
+  become: true
+  loop: "{{ optional_packages | default([]) }}"
+  register: optional_pkg_result
+  failed_when: false
+
+- name: Display warning for optional packages that could not be installed
+  ansible.builtin.debug:
+    msg: "Warning: Optional package {{ item.item }} could not be installed. Continuing."
+  loop: "{{ optional_pkg_result.results }}"
+  when: item.failed is defined and item.failed
+
 - name: Install Debian-specific packages
   ansible.builtin.apt:
     name: "{{ debian_specific_packages }}"
@@ -73,14 +88,7 @@
 
 - name: Set architecture fact
   ansible.builtin.set_fact:
-    deb_architecture: >-
-      {% if ansible_architecture == 'x86_64' %}
-      amd64
-      {% elif ansible_architecture == 'aarch64' %}
-      arm64
-      {% else %}
-      {{ ansible_architecture }}
-      {% endif %}
+    deb_architecture: "{% if ansible_architecture == 'x86_64' %}amd64{% elif ansible_architecture == 'aarch64' %}arm64{% else %}{{ ansible_architecture }}{% endif %}"
   when:
     - chezmoi_install | bool
     - not chezmoi_binary.stat.exists | default(false)
