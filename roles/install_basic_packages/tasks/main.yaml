@@ -73,7 +73,14 @@
 
 - name: Set architecture fact
   ansible.builtin.set_fact:
-    deb_architecture: "{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
+    deb_architecture: >-
+      {% if ansible_architecture == 'x86_64' %}
+      amd64
+      {% elif ansible_architecture == 'aarch64' %}
+      arm64
+      {% else %}
+      {{ ansible_architecture }}
+      {% endif %}
   when:
     - chezmoi_install | bool
     - not chezmoi_binary.stat.exists | default(false)
@@ -148,6 +155,29 @@
   when: 
     - chezmoi_install | bool
     - chezmoi_apply | bool
+
+# Stelle sicher, dass .oh-my-zsh korrekte Eigentümerschaft hat
+- name: Check if .oh-my-zsh exists
+  ansible.builtin.stat:
+    path: "/home/{{ chezmoi_user }}/.oh-my-zsh"
+  register: oh_my_zsh_dir
+  become: true
+  when:
+    - chezmoi_install | bool
+    - chezmoi_apply | bool
+
+- name: Ensure .oh-my-zsh belongs to chezmoi_user
+  ansible.builtin.file:
+    path: "/home/{{ chezmoi_user }}/.oh-my-zsh"
+    state: directory
+    owner: "{{ chezmoi_user }}"
+    group: "{{ chezmoi_user }}"
+    recurse: yes
+  become: true
+  when:
+    - chezmoi_install | bool
+    - chezmoi_apply | bool
+    - oh_my_zsh_dir.stat.exists | default(false)
 
 # Verwende das su-Modul, um Befehle als chezmoi_user auszuführen
 - name: Initialize chezmoi with user's dotfiles repo

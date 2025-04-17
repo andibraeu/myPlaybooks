@@ -1,7 +1,40 @@
 ---
-- name: apt get update for server "{{ inventory_hostname }}"
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: "{{ update_cache_valid_time | default(3600) }}"
+  tags: [update, update_cache]
+
+- name: Run safe upgrade (default)
   ansible.builtin.apt:
     upgrade: yes
-    update_cache: yes
-  become: true
-  become_method: sudo
+    update_cache: no  # Already done in previous task
+  when: upgrade_type == "safe" or upgrade_type is not defined
+  register: upgrade_result
+  tags: [update, safe_upgrade]
+
+- name: Run full upgrade (like apt full-upgrade)
+  ansible.builtin.apt:
+    upgrade: full
+    update_cache: no
+  when: upgrade_type == "full"
+  register: upgrade_result
+  tags: [update, full_upgrade]
+
+- name: Run dist upgrade (like apt dist-upgrade)
+  ansible.builtin.apt:
+    upgrade: dist
+    update_cache: no
+  when: upgrade_type == "dist"
+  register: upgrade_result
+  tags: [update, dist_upgrade]
+
+- name: Clean up unused packages (like apt autoremove)
+  ansible.builtin.apt:
+    autoremove: yes
+  tags: [update, cleanup]
+
+- name: Clean apt cache
+  ansible.builtin.apt:
+    autoclean: yes
+  tags: [update, cleanup]
