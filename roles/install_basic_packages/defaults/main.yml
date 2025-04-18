@@ -47,4 +47,4 @@ fail2ban_findtime: "10m"
 fail2ban_maxretry: "5"
 fail2ban_backend: "auto"
 fail2ban_email: root
-fail2ban_sender: root@localhost 
+fail2ban_sender: "root@{{ inventory_hostname }}" 
