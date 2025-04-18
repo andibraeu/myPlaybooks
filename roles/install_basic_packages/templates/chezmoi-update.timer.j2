@@ -1,0 +1,10 @@
+[Unit]
+Description=Run chezmoi update {{ chezmoi_update_frequency | default('daily') }}
+
+[Timer]
+OnCalendar={{ chezmoi_update_frequency | default('daily') }}
+RandomizedDelaySec={{ chezmoi_update_delay | default('300') }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target 

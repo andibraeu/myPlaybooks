@@ -28,6 +28,9 @@ chezmoi_apply: true
 chezmoi_user: "{{ my_user }}"
 chezmoi_verify_signature: true
 chezmoi_version: "latest"  # Specify version or "latest"
+chezmoi_auto_update: true  # Whether to enable automatic updates
+chezmoi_update_hour: "4"   # Hour (0-23) for the cron job
+chezmoi_update_minute: "30"  # Minute (0-59) for the cron job
 
 # Apticron configuration
 apticron_email: root
