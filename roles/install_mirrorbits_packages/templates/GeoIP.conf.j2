@@ -1,0 +1,13 @@
+# GeoIP.conf file - Used by geoipupdate program to update GeoIP databases
+# This file is configured by Ansible
+
+# Your account ID and license key are used to authenticate downloads
+# Replace with your values or use the free GeoLite2 databases
+AccountID {{ geoip_account_id | default('0') }}
+LicenseKey {{ geoip_license_key | default('000000000000') }}
+
+# List of databases to update
+# The free GeoLite2 Country, City, and ASN databases
+EditionIDs GeoLite2-Country GeoLite2-City GeoLite2-ASN q
+
+DatabaseDirectory /usr/share/GeoIP

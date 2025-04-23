@@ -1,0 +1,20 @@
+[Unit]
+Description=Mirrorbits Mirror Selection Tool
+After=network.target redis-server.service
+Wants=redis-server.service
+
+[Service]
+Type=simple
+User=mirrorbits
+Group=mirrorbits
+ExecStart={{ mirrorbits_bin_path }} daemon -config {{ mirrorbits_config_dir }}/mirrorbits.conf
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths={{ mirrorbits_repository_base_path }} {{ mirrorbits_cache_dir }} /var/log/mirrorbits
+
+[Install]
+WantedBy=multi-user.target 

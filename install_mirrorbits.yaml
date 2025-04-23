@@ -3,4 +3,3 @@
   hosts: debian-based
   roles:
   - install_mirrorbits_packages
-  - add_mirrorbits_user

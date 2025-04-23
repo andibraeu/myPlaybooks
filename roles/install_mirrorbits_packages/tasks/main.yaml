@@ -1,6 +1,178 @@
 ---
+# Aktiviere contrib-Repository für geoipupdate
+- name: Ensure contrib repository is enabled
+  ansible.builtin.apt_repository:
+    repo: "deb http://deb.debian.org/debian {{ ansible_distribution_release }} main contrib"
+    state: present
+    update_cache: yes
+  become: true
+  when: ansible_distribution == 'Debian'
+
+- name: Ensure contrib repository is enabled (Ubuntu)
+  ansible.builtin.apt_repository:
+    repo: "deb http://archive.ubuntu.com/ubuntu {{ ansible_distribution_release }} main restricted universe multiverse contrib"
+    state: present
+    update_cache: yes
+  become: true
+  when: ansible_distribution == 'Ubuntu'
+
 - name: install mirrorbit packages
   become: true
   ansible.builtin.apt: 
-    name: ['golang-go', 'redis-server', 'libgeoip-dev']
+    name: ['golang-go', 'redis-server', 'libgeoip-dev', 'geoipupdate']
     state: present
+
+# Create Mirrorbits user
+- name: Create mirrorbits group
+  ansible.builtin.group:
+    name: mirrorbits
+    state: present
+  become: true
+
+- name: Create mirrorbits user
+  ansible.builtin.user:
+    name: mirrorbits
+    group: mirrorbits
+    shell: /bin/false
+    system: yes
+    createhome: no
+    state: present
+  become: true
+
+# Create necessary directories
+- name: Create Mirrorbits log directory
+  ansible.builtin.file:
+    path: /var/log/mirrorbits
+    state: directory
+    owner: mirrorbits
+    group: mirrorbits
+    mode: '0755'
+  become: true
+
+- name: Create Mirrorbits cache directory
+  ansible.builtin.file:
+    path: "{{ mirrorbits_cache_dir }}"
+    state: directory
+    owner: mirrorbits
+    group: mirrorbits
+    mode: '0755'
+  become: true
+
+- name: Create repository directory
+  ansible.builtin.file:
+    path: "{{ mirrorbits_repository_base_path }}"
+    state: directory
+    owner: mirrorbits
+    group: mirrorbits
+    mode: '0755'
+  become: true
+
+- name: Create /usr/share/mirrorbits directory for templates
+  ansible.builtin.file:
+    path: "/usr/share/mirrorbits"
+    state: directory
+    mode: '0755'
+  become: true
+
+# Install Mirrorbits
+- name: Check if mirrorbits is already installed
+  ansible.builtin.stat:
+    path: "{{ mirrorbits_bin_path }}"
+  register: mirrorbits_binary
+  become: true
+  
+- name: Create temporary download directory
+  ansible.builtin.file:
+    path: "/tmp/mirrorbits-install"
+    state: directory
+    mode: '0755'
+  become: true
+  when: not mirrorbits_binary.stat.exists | default(false)
+
+- name: Download Mirrorbits release archive
+  ansible.builtin.get_url:
+    url: "{{ mirrorbits_download_url }}"
+    dest: "/tmp/mirrorbits-install/mirrorbits.tar.gz"
+    mode: '0644'
+  become: true
+  when: not mirrorbits_binary.stat.exists | default(false)
+  
+- name: Extract Mirrorbits archive
+  ansible.builtin.unarchive:
+    src: "/tmp/mirrorbits-install/mirrorbits.tar.gz"
+    dest: "/tmp/mirrorbits-install"
+    remote_src: yes
+  become: true
+  when: not mirrorbits_binary.stat.exists | default(false)
+
+- name: Install Mirrorbits binary
+  ansible.builtin.copy:
+    src: "/tmp/mirrorbits-install/mirrorbits/mirrorbits"
+    dest: "{{ mirrorbits_bin_path }}"
+    mode: '0755'
+    remote_src: yes
+  become: true
+  when: not mirrorbits_binary.stat.exists | default(false)
+
+- name: Copy templates from archive to /usr/share/mirrorbits
+  ansible.builtin.copy:
+    src: "/tmp/mirrorbits-install/mirrorbits/templates/"
+    dest: "/usr/share/mirrorbits/"
+    mode: '0644'
+    remote_src: yes
+  become: true
+  when: not mirrorbits_binary.stat.exists | default(false)
+
+- name: Clean up download directory
+  ansible.builtin.file:
+    path: "/tmp/mirrorbits-install"
+    state: absent
+  become: true
+  when: not mirrorbits_binary.stat.exists | default(false)
+
+# Create mirrorbits configuration
+- name: Create Mirrorbits config directory
+  ansible.builtin.file:
+    path: "{{ mirrorbits_config_dir }}"
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Create Mirrorbits configuration file
+  ansible.builtin.template:
+    src: mirrorbits.conf.j2
+    dest: "{{ mirrorbits_config_dir }}/mirrorbits.conf"
+    mode: '0644'
+  become: true
+
+# Configure GeoIP update
+- name: Create GeoIP configuration file
+  ansible.builtin.template:
+    src: GeoIP.conf.j2
+    dest: "/etc/GeoIP.conf"
+    mode: '0644'
+  become: true
+
+# Create service file
+- name: Create systemd service file
+  ansible.builtin.template:
+    src: mirrorbits.service.j2
+    dest: "/etc/systemd/system/mirrorbits.service"
+    mode: '0644'
+  become: true
+  notify: Reload systemd
+
+# Update GeoIP database
+- name: Update GeoIP database
+  ansible.builtin.command: geoipupdate
+  become: true
+  register: geoip_update
+  changed_when: "'Downloaded' in geoip_update.stdout or 'Updated' in geoip_update.stdout"
+  failed_when: false  # Don't fail if the update doesn't succeed
+
+- name: Ensure Mirrorbits service is enabled and started
+  ansible.builtin.systemd:
+    name: mirrorbits
+    enabled: yes
+    state: started
+  become: true

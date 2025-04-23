@@ -1,7 +1,0 @@
----
-- name: add user mirrorbits
-  become: true
-  ansible.builtin.user:
-    name: mirrorbits
-    shell: /bin/zsh
-    state: present

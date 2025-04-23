@@ -1,0 +1,22 @@
+---
+# Mirrorbits installation settings
+mirrorbits_version: "v0.6"  # Latest release version
+mirrorbits_download_url: "https://github.com/etix/mirrorbits/releases/download/{{ mirrorbits_version }}/mirrorbits-{{ mirrorbits_version }}.tar.gz"
+mirrorbits_bin_path: "/usr/local/bin/mirrorbits"
+mirrorbits_config_dir: "/etc/mirrorbits"
+
+# Mirrorbits configuration
+mirrorbits_listen: ":8080"
+mirrorbits_repository_base_path: "/srv/repo"
+mirrorbits_cache_dir: "/var/cache/mirrorbits"
+mirrorbits_geoip_db_path: "/usr/share/GeoIP"
+mirrorbits_redis_host: "127.0.0.1"
+mirrorbits_redis_port: "6379"
+mirrorbits_redis_password: ""
+mirrorbits_redis_db: 0
+mirrorbits_hashing_algo: "sha256"  # Supported values: sha1, sha256, md5
+
+# GeoIP Configuration - Leave as default for free GeoLite2 databases
+# Or enter your MaxMind account details if you have a paid subscription
+geoip_account_id: "0" 
+geoip_license_key: "000000000000" 
