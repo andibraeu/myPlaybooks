@@ -19,7 +19,7 @@
 - name: install mirrorbit packages
   become: true
   ansible.builtin.apt: 
-    name: ['golang-go', 'redis-server', 'libgeoip-dev', 'geoipupdate']
+    name: ['golang-go', 'redis-server', 'libgeoip-dev', 'geoipupdate', 'net-tools']
     state: present
 
 # Create Mirrorbits user
@@ -48,6 +48,16 @@
     group: mirrorbits
     mode: '0755'
   become: true
+
+- name: Create Mirrorbits trace directory
+  ansible.builtin.file:
+    path: "{{ mirrorbits_trace_file_location | dirname }}"
+    state: directory
+    owner: mirrorbits
+    group: mirrorbits
+    mode: '0755'
+  become: true
+  when: mirrorbits_enable_trace | bool
 
 - name: Create Mirrorbits cache directory
   ansible.builtin.file:

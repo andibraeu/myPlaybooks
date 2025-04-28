@@ -1,0 +1,16 @@
+---
+# Caddy installation and configuration
+caddy_apt_key_url: "https://dl.cloudsmith.io/public/caddy/stable/gpg.key"
+caddy_apt_repository: "deb [signed-by=/usr/share/keyrings/caddy-stable-archive-keyring.gpg] https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main"
+caddy_keyring_path: "/usr/share/keyrings/caddy-stable-archive-keyring.gpg"
+
+# Domain configuration
+caddy_proxy_domain: "cdn.media.freifunk.net"  # Domain for Mirrorbits proxy
+caddy_files_domain: "cdn-m1.media.freifunk.net"  # Domain for direct file serving
+caddy_admin_email: "admin@example.org"
+
+# Mirrorbits proxy configuration
+mirrorbits_backend: "localhost:8080"
+
+# Repository configuration
+caddy_repository_path: "/srv/repo" 

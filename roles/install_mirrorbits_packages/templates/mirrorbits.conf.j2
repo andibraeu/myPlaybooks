@@ -1,22 +1,74 @@
 Repository: {{ mirrorbits_repository_base_path }}
 Templates: /usr/share/mirrorbits/
-OutputMode: redirect
+OutputMode: {{ mirrorbits_output_mode }}
 ListenAddress: {{ mirrorbits_listen }}
+{% if mirrorbits_local_js_path is defined and mirrorbits_local_js_path %}
+LocalJSPath: {{ mirrorbits_local_js_path }}
+{% endif %}
 Gzip: true
+
+{% if mirrorbits_redis_use_sentinel | bool %}
+RedisSentinelMasterName: {{ mirrorbits_redis_sentinel_master_name }}
+RedisSentinels:
+{% for sentinel in mirrorbits_redis_sentinels %}
+    - {{ sentinel }}
+{% endfor %}
+{% endif %}
 RedisAddress: {{ mirrorbits_redis_host }}:{{ mirrorbits_redis_port }}
 RedisPassword: {{ mirrorbits_redis_password }}
 RedisDB: {{ mirrorbits_redis_db }}
+
+{% if mirrorbits_enable_logging | bool %}
 LogDir: /var/log/mirrorbits
+{% else %}
+#LogDir: /var/log/mirrorbits
+{% endif %}
+
+{% if mirrorbits_enable_trace | bool %}
+TraceFileLocation: {{ mirrorbits_trace_file_location }}
+{% endif %}
+
 GeoipDatabasePath: {{ mirrorbits_geoip_db_path }}
+RPCListenAddress: {{ mirrorbits_rpc_listen_address }}
 ConcurrentSync: 5
 ScanInterval: 30
 CheckInterval: 1
 RepositoryScanInterval: 5
+
+{% if mirrorbits_use_multiple_hashes | bool %}
+Hashes:
+{% if mirrorbits_enable_sha256 | bool %}
+    SHA256: On
+{% else %}
+    SHA256: Off
+{% endif %}
+{% if mirrorbits_enable_sha1 | bool %}
+    SHA1: On
+{% else %}
+    SHA1: Off
+{% endif %}
+{% if mirrorbits_enable_md5 | bool %}
+    MD5: On
+{% else %}
+    MD5: Off
+{% endif %}
+{% else %}
 Hashing: true
 HashingAlgorithm: {{ mirrorbits_hashing_algo }}
+{% endif %}
+
 DisallowRedirects: false
-WeightDistributionRange: 1.5
-DisableOnMissingFile: false
-MaxLinkHeaders: 10
+WeightDistributionRange: {{ mirrorbits_weight_distribution_range }}
+DisableOnMissingFile: {{ mirrorbits_disable_on_missing_file | lower }}
+MaxLinkHeaders: {{ mirrorbits_max_link_headers }}
+
 Fallbacks:
+{% if mirrorbits_fallbacks | length > 0 %}
+{% for fallback in mirrorbits_fallbacks %}
+    - URL: {{ fallback.url }}
+      CountryCode: {{ fallback.country_code }}
+      ContinentCode: {{ fallback.continent_code }}
+{% endfor %}
+{% endif %}
+
 CacheTTL: 1h 

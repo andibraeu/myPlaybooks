@@ -1,0 +1,66 @@
+# Caddyfile for Mirrorbits and file serving
+{
+    email {{ caddy_admin_email }}
+}
+
+# Domain for Mirrorbits proxy - handles all mirrorbits requests
+{{ caddy_proxy_domain }} {
+    log {
+        output file /var/log/caddy/{{ caddy_proxy_domain }}.log
+    }
+    
+    # Proxy everything to mirrorbits backend
+    reverse_proxy {{ mirrorbits_backend }}
+    
+    # Add security headers
+    header {
+        # Enable HTTP Strict Transport Security (HSTS)
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        # Disable content-type sniffing
+        X-Content-Type-Options "nosniff"
+        # Enable XSS protection
+        X-XSS-Protection "1; mode=block"
+        # Prevent clickjacking
+        X-Frame-Options "SAMEORIGIN"
+        # Control referrer information
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Allow CORS from media.freifunk.net
+        Access-Control-Allow-Origin "https://media.freifunk.net"
+        Access-Control-Allow-Methods "GET, OPTIONS"
+        Access-Control-Allow-Headers "DNT, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-Type, Range"
+        Access-Control-Expose-Headers "Content-Length, Content-Range"
+    }
+}
+
+# Domain for direct file serving - fallback server
+{{ caddy_files_domain }} {
+    # Basic site settings
+    root * {{ caddy_repository_path }}
+    log {
+        output file /var/log/caddy/{{ caddy_files_domain }}.log
+    }
+    
+    # Direct file serving
+    handle {
+        file_server browse
+    }
+    
+    # Add security headers
+    header {
+        # Enable HTTP Strict Transport Security (HSTS)
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        # Disable content-type sniffing
+        X-Content-Type-Options "nosniff"
+        # Enable XSS protection
+        X-XSS-Protection "1; mode=block"
+        # Prevent clickjacking
+        X-Frame-Options "SAMEORIGIN"
+        # Control referrer information
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Allow CORS from cdn.media.freifunk.net
+        Access-Control-Allow-Origin "*"
+        Access-Control-Allow-Methods "GET, OPTIONS"
+        Access-Control-Allow-Headers "DNT, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-Type, Range"
+        Access-Control-Expose-Headers "Content-Length, Content-Range"
+    }
+} 

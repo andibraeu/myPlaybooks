@@ -1,0 +1,48 @@
+---
+# Install Caddy web server
+
+- name: Install required packages
+  ansible.builtin.apt:
+    name: 
+      - apt-transport-https
+      - gnupg
+      - ca-certificates
+    state: present
+  become: true
+
+- name: Download Caddy GPG key
+  ansible.builtin.get_url:
+    url: "{{ caddy_apt_key_url }}"
+    dest: /tmp/caddy-key.gpg
+    mode: '0644'
+  become: true
+
+- name: Add Caddy GPG key to keyring
+  ansible.builtin.shell: |
+    gpg --dearmor < /tmp/caddy-key.gpg > {{ caddy_keyring_path }}
+  args:
+    creates: "{{ caddy_keyring_path }}"
+  become: true
+
+- name: Add Caddy repository
+  ansible.builtin.apt_repository:
+    repo: "{{ caddy_apt_repository }}"
+    state: present
+    filename: caddy-stable
+    update_cache: yes
+  become: true
+
+- name: Install Caddy
+  ansible.builtin.apt:
+    name: caddy
+    state: present
+  become: true
+
+# Configure Caddy
+- name: Create Caddy configuration
+  ansible.builtin.template:
+    src: Caddyfile.j2
+    dest: /etc/caddy/Caddyfile
+    mode: '0644'
+  become: true
+  notify: Restart Caddy 

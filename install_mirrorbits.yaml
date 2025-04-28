@@ -3,3 +3,4 @@
   hosts: debian-based
   roles:
   - install_mirrorbits_packages
+  - setup_caddy
