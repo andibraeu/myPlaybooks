@@ -3,40 +3,40 @@
   become: true
   ansible.builtin.apt: 
     name: 
-      - git-core
-      - curl
-      - zlib1g-dev
-      - build-essential
-      - libssl-dev
-      - libreadline-dev
-      - libyaml-dev
-      - libsqlite3-dev
-      - sqlite3
-      - libxml2-dev
-      - libxslt1-dev
-      - libcurl4-openssl-dev
-      - python-software-properties
-      - libffi-dev
-      - libgdbm-dev
-      - libncurses5-dev
-      - automake
-      - libtool
-      - bison
-      - graphviz
+    - git-core
+    - curl
+    - zlib1g-dev
+    - build-essential
+    - libssl-dev
+    - libreadline-dev
+    - libyaml-dev
+    - libsqlite3-dev
+    - sqlite3
+    - libxml2-dev
+    - libxslt1-dev
+    - libcurl4-openssl-dev
+    - python-software-properties
+    - libffi-dev
+    - libgdbm-dev
+    - libncurses5-dev
+    - automake
+    - libtool
+    - bison
+    - graphviz
     state: present
 
 - name: install voctoweb packages from backports
   become: true
   ansible.builtin.apt: 
     name: 
-      - nodejs
-      - redis-server
-      # - elasticsearch ==> install via repo
-      - postgresql
-      - python-psycopg2
-      - libpq-dev
-      - openjdk-8-jre-headless
-      - nginx
-      - certbot
+    - nodejs
+    - redis-server
+    # - elasticsearch ==> install via repo
+    - postgresql
+    - python-psycopg2
+    - libpq-dev
+    - openjdk-8-jre-headless
+    - nginx
+    - certbot  
     state: present
     default_release: "{{ansible_distribution_release}}-backports"  

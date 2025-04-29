@@ -1,6 +1,8 @@
 # Caddyfile for Mirrorbits and file serving
 {
     email {{ caddy_admin_email }}
+    # Uncomment for more verbose logging if needed
+    # debug
 }
 
 # Domain for Mirrorbits proxy - handles all mirrorbits requests
@@ -20,13 +22,15 @@
         X-Content-Type-Options "nosniff"
         # Enable XSS protection
         X-XSS-Protection "1; mode=block"
-        # Prevent clickjacking
-        X-Frame-Options "SAMEORIGIN"
+        # Prevent clickjacking, but allow media.freifunk.net
+        Content-Security-Policy "frame-ancestors 'self' https://media.freifunk.net;"
+        # Remove X-Frame-Options as it conflicts with CSP frame-ancestors
+        -X-Frame-Options
         # Control referrer information
         Referrer-Policy "strict-origin-when-cross-origin"
         # Allow CORS from media.freifunk.net
         Access-Control-Allow-Origin "https://media.freifunk.net"
-        Access-Control-Allow-Methods "GET, OPTIONS"
+        Access-Control-Allow-Methods "GET, OPTIONS, HEAD"
         Access-Control-Allow-Headers "DNT, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-Type, Range"
         Access-Control-Expose-Headers "Content-Length, Content-Range"
     }
@@ -40,27 +44,43 @@
         output file /var/log/caddy/{{ caddy_files_domain }}.log
     }
     
-    # Direct file serving
-    handle {
-        file_server browse
-    }
-    
-    # Add security headers
+    # Set security and CORS headers for all requests
     header {
-        # Enable HTTP Strict Transport Security (HSTS)
+        # Security headers that don't interfere with embedding
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
-        # Disable content-type sniffing
         X-Content-Type-Options "nosniff"
-        # Enable XSS protection
-        X-XSS-Protection "1; mode=block"
-        # Prevent clickjacking
-        X-Frame-Options "SAMEORIGIN"
-        # Control referrer information
-        Referrer-Policy "strict-origin-when-cross-origin"
-        # Allow CORS from cdn.media.freifunk.net
-        Access-Control-Allow-Origin "*"
-        Access-Control-Allow-Methods "GET, OPTIONS"
+        
+        # Allow embedding in iframes from media.freifunk.net
+        # CSP frame-ancestors replaces X-Frame-Options and is more flexible
+        Content-Security-Policy "frame-ancestors 'self' https://media.freifunk.net;"
+        
+        # CORS configuration for media files
+        Access-Control-Allow-Origin "https://media.freifunk.net"
+        Access-Control-Allow-Methods "GET, OPTIONS, HEAD"
         Access-Control-Allow-Headers "DNT, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-Type, Range"
         Access-Control-Expose-Headers "Content-Length, Content-Range"
+        
+        # Vary header ensures caching works correctly with CORS
+        Vary "Origin"
     }
+    
+    # Handle OPTIONS requests for CORS preflight
+    @options {
+        method OPTIONS
+    }
+    respond @options 204
+    
+    # Special handling for video and subtitle files
+    @media {
+        path *.mp4 *.webm *.ogg *.m4v *.vtt *.srt *.ass *.ssa
+    }
+    header @media {
+        # Make sure range requests work properly for media files
+        Accept-Ranges bytes
+        # Add Cache-Control for media files
+        Cache-Control "public, max-age=86400"
+    }
+    
+    # Direct file serving
+    file_server browse
 } 
