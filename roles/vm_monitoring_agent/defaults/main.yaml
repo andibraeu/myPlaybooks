@@ -1,0 +1,10 @@
+# Snap-only Setup
+vmagent_snap_name: victoriametrics
+vmagent_snap_channel: latest/stable
+vmagent_binary_path: /snap/bin/victoriametrics.vmagent
+
+# Remote write (per Inventory überschreiben!)
+vmauth_url: "https://vmauth.example.org/api/v1/write"
+vm_user: "srv-default"
+vm_pass: "CHANGEME"                         # -> via Ansible Vault ablegen
+vm_remote_label: "source={{ inventory_hostname }}"

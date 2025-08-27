@@ -1,0 +1,1 @@
+ARGS="--web.listen-address=127.0.0.1:9100{% if node_exporter_disable_defaults %} --collector.disable-defaults{% endif %}{% for c in node_exporter_enabled_collectors %} --collector.{{ c }}{% endfor %} --web.disable-exporter-metrics"

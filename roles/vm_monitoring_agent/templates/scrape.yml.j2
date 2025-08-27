@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 60s
+
+scrape_configs:
+  - job_name: node
+    static_configs: [{ targets: ["127.0.0.1:9100"] }]
+
+{% if (enable_apache_exporter is not none and enable_apache_exporter)|bool
+   or (enable_apache_exporter is none and auto_detect_exporters|default(true) and 'apache2' in (ansible_facts.packages|default({}))) %}
+  - job_name: apache
+    static_configs: [{ targets: ["127.0.0.1:9117"] }]
+{% endif %}
+
+{% if (enable_bind_exporter is not none and enable_bind_exporter)|bool
+   or (enable_bind_exporter is none and auto_detect_exporters|default(true) and 'bind9' in (ansible_facts.packages|default({}))) %}
+  - job_name: bind
+    static_configs: [{ targets: ["127.0.0.1:9119"] }]
+{% endif %}
+
+{% if (enable_mysql_exporter is not none and enable_mysql_exporter)|bool
+   or (enable_mysql_exporter is none and auto_detect_exporters|default(true) and
+       ('mariadb-server' in (ansible_facts.packages|default({})) or 'mysql-server' in (ansible_facts.packages|default({})))) %}
+  - job_name: mysqld
+    static_configs: [{ targets: ["127.0.0.1:9104"] }]
+{% endif %}

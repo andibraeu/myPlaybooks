@@ -1,0 +1,135 @@
+---
+- name: Gather installed packages
+  ansible.builtin.package_facts:
+    manager: auto
+
+# ===== node_exporter (immer sinnvoll) =========================================
+- name: Install node_exporter
+  ansible.builtin.apt:
+    name: prometheus-node-exporter
+    state: present
+    update_cache: true
+
+- name: Configure node_exporter defaults
+  ansible.builtin.template:
+    src: node_exporter_default.j2
+    dest: /etc/default/prometheus-node-exporter
+    mode: "0644"
+  notify: Restart node_exporter
+
+# ===== Apache exporter (auto-oder-manual) =====================================
+- name: Decide enable_apache_exporter (auto-detect)
+  ansible.builtin.set_fact:
+    _enable_apache_effective: "{{ enable_apache_exporter
+                                  if enable_apache_exporter is not none
+                                  else (auto_detect_exporters and ('apache2' in ansible_facts.packages)) }}"
+
+- name: Install apache exporter
+  ansible.builtin.apt:
+    name: prometheus-apache-exporter
+    state: present
+  when: _enable_apache_effective | bool
+
+- name: Ensure Apache mod_status only on localhost
+  ansible.builtin.copy:
+    dest: /etc/apache2/conf-available/prometheus-status.conf
+    mode: "0644"
+    content: |
+      <Location /server-status>
+        SetHandler server-status
+        Require local
+      </Location>
+  when: _enable_apache_effective | bool
+  notify: Reload apache2
+
+- name: Enable status config
+  ansible.builtin.command: a2enconf prometheus-status
+  register: _a2enconf
+  changed_when: "'Enabling conf prometheus-status' in _a2enconf.stdout"
+  when: _enable_apache_effective | bool
+  notify: Reload apache2
+
+- name: Enable mod_status
+  community.general.apache2_module:
+    name: status
+    state: present
+  when: _enable_apache_effective | bool
+  notify: Reload apache2
+
+- name: Configure apache exporter defaults
+  ansible.builtin.template:
+    src: apache_exporter_default.j2
+    dest: /etc/default/prometheus-apache-exporter
+  when: _enable_apache_effective | bool
+  notify: Restart apache_exporter
+
+# ===== BIND exporter (auto-oder-manual) =======================================
+- name: Decide enable_bind_exporter (auto-detect)
+  ansible.builtin.set_fact:
+    _enable_bind_effective: "{{ enable_bind_exporter
+                                if enable_bind_exporter is not none
+                                else (auto_detect_exporters and ('bind9' in ansible_facts.packages)) }}"
+
+- name: Install bind exporter
+  ansible.builtin.apt:
+    name: prometheus-bind-exporter
+    state: present
+  when: _enable_bind_effective | bool
+
+- name: Deploy BIND statistics channel include (127.0.0.1:8053)
+  ansible.builtin.template:
+    src: named-statistics.conf.j2
+    dest: /etc/bind/named.conf.statistics
+    mode: "0644"
+  when: _enable_bind_effective | bool
+  notify: Restart bind9
+
+- name: Ensure statistics include referenced
+  ansible.builtin.lineinfile:
+    path: /etc/bind/named.conf.local
+    line: 'include "/etc/bind/named.conf.statistics";'
+    insertafter: EOF
+  when: _enable_bind_effective | bool
+  notify: Restart bind9
+
+- name: Configure bind exporter defaults
+  ansible.builtin.template:
+    src: bind_exporter_default.j2
+    dest: /etc/default/prometheus-bind-exporter
+  when: _enable_bind_effective | bool
+  notify: Restart bind_exporter
+
+# ===== MySQL/MariaDB exporter (auto-oder-manual) ==============================
+- name: Decide enable_mysql_exporter (auto-detect)
+  ansible.builtin.set_fact:
+    _enable_mysql_effective: "{{ enable_mysql_exporter
+                                 if enable_mysql_exporter is not none
+                                 else (auto_detect_exporters and
+                                       ( 'mariadb-server' in ansible_facts.packages or
+                                         'mysql-server'  in ansible_facts.packages )) }}"
+
+- name: Install mysqld exporter
+  ansible.builtin.apt:
+    name: prometheus-mysqld-exporter
+    state: present
+  when: _enable_mysql_effective | bool
+
+# optional: Exporter-User anlegen (per Unix-Socket)
+- name: Create MySQL exporter user/grants
+  community.mysql.mysql_query:
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    queries:
+      - "CREATE USER IF NOT EXISTS '{{ mysql_exporter_user|default('prom_exporter') }}'@'localhost' IDENTIFIED BY '{{ mysql_exporter_password|default('CHANGEME') }}';"
+      - "GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO '{{ mysql_exporter_user|default('prom_exporter') }}'@'localhost';"
+      - "GRANT SELECT ON performance_schema.* TO '{{ mysql_exporter_user|default('prom_exporter') }}'@'localhost';"
+      - "FLUSH PRIVILEGES;"
+  when: _enable_mysql_effective | bool
+  become: true
+
+- name: Configure mysqld exporter defaults (socket auth)
+  ansible.builtin.template:
+    src: mysqld_exporter_default.j2
+    dest: /etc/default/prometheus-mysqld-exporter
+    mode: "0640"
+  when: _enable_mysql_effective | bool
+  notify: Restart mysqld_exporter

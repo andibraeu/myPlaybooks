@@ -8,8 +8,32 @@
     pkg_mgr: ${ansible_pkg_mgr}
     zsh_theme: agnoster
     ssh_keys: https://github.com/andibraeu.keys
+    # Defaults – pro Host/Gruppe überschreibbar (host_vars / group_vars)
+    monitor_with_vmagent: false                   # Opt-in per Host
+    auto_detect_exporters: true                   # Auto-Erkennung aktiv
+    vmauth_url: "https://vmauth.ei.ne-zier.de/api/v1/write"
+    vm_user: "srv-default"
+    vm_pass: "CHANGEME"                           # via Vault!
+    vm_remote_label: "source={{ inventory_hostname }}"
+    # Manuelles Übersteuern (optional)
+    enable_apache_exporter: null                  # true/false überschreibt Auto
+    enable_bind_exporter:   null
+    enable_mysql_exporter:  null
+    # node_exporter schlank halten
+    node_exporter_disable_defaults: true
+    node_exporter_enabled_collectors:
+      - cpu
+      - meminfo
+      - filesystem
+      - diskstats
+      - netdev
+      - loadavg
   roles:
   - install_sudo
   - add_admin_user
   - copy_ssh_keys
   - install_basic_packages
+  - role: exporters
+    when: monitor_with_vmagent | default(false)
+  - role: vm_monitoring_agent
+    when: monitor_with_vmagent | default(false)

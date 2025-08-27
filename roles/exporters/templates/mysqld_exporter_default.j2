@@ -1,0 +1,2 @@
+# Bevorzugt via Unix-Socket (keine Klartext-Host/Port-Creds nötig)
+DATA_SOURCE_NAME="{{ mysql_exporter_user|default('prom_exporter') }}:{{ mysql_exporter_password|default('CHANGEME') }}@unix(/var/run/mysqld/mysqld.sock)/"

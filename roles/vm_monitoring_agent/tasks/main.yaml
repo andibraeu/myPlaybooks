@@ -1,0 +1,63 @@
+---
+# 1) snapd & vmagent (Snap)
+- name: Ensure snapd is installed
+  ansible.builtin.apt:
+    name: snapd
+    state: present
+    update_cache: true
+
+- name: Ensure vmagent snap is installed
+  community.general.snap:
+    name: "{{ vmagent_snap_name }}"
+    state: present
+    channel: "{{ vmagent_snap_channel }}"
+
+# Falls der Snap-eigene Dienst existiert, stoppen/disable (wir nutzen eigene Unit)
+- name: Disable snap vmagent service if present
+  ansible.builtin.service:
+    name: "snap.{{ vmagent_snap_name }}.vmagent.service"
+    state: stopped
+    enabled: false
+  ignore_errors: true
+
+# 2) Config-Dateien
+- name: Ensure config dir exists
+  ansible.builtin.file:
+    path: /etc/vmagent
+    state: directory
+    mode: "0755"
+
+- name: Render scrape config (60s, lokale Exporter)
+  ansible.builtin.template:
+    src: scrape.yml.j2
+    dest: /etc/vmagent/scrape.yml
+    mode: "0644"
+  notify: Restart vmagent
+
+- name: Render remote env (user/pass/url & label)
+  ansible.builtin.template:
+    src: remote.env.j2
+    dest: /etc/vmagent/remote.env
+    mode: "0600"
+  notify: Restart vmagent
+
+# 3) Systemd-Unit (ruft den Snap-Wrapper auf)
+- name: Install vmagent systemd unit
+  ansible.builtin.template:
+    src: vmagent.service.j2
+    dest: /etc/systemd/system/vmagent.service
+    mode: "0644"
+  notify: Daemon reload
+
+- name: Ensure buffer dir exists
+  ansible.builtin.file:
+    path: /var/lib/vmagent
+    state: directory
+    mode: "0755"
+
+# 4) Start
+- name: Enable and start vmagent
+  ansible.builtin.systemd:
+    name: vmagent
+    state: started
+    enabled: true
