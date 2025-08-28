@@ -9,16 +9,14 @@
     zsh_theme: agnoster
     ssh_keys: https://github.com/andibraeu.keys
     # Defaults – pro Host/Gruppe überschreibbar (host_vars / group_vars)
-    monitor_with_vmagent: false                   # Opt-in per Host
+    # monitor_with_vmagent: Default entfernt, wird über host_vars/group_vars gesetzt
     auto_detect_exporters: true                   # Auto-Erkennung aktiv
     vmauth_url: "https://vmauth.ei.ne-zier.de/api/v1/write"
-    vm_user: "srv-default"
-    vm_pass: "CHANGEME"                           # via Vault!
+    # vm_user und vm_pass: werden über host_vars/group_vars pro Host gesetzt
     vm_remote_label: "source={{ inventory_hostname }}"
     # Manuelles Übersteuern (optional)
     enable_apache_exporter: null                  # true/false überschreibt Auto
     enable_bind_exporter:   null
-    enable_mysql_exporter:  null
     # node_exporter schlank halten
     node_exporter_disable_defaults: true
     node_exporter_enabled_collectors:
@@ -35,5 +33,7 @@
   - install_basic_packages
   - role: exporters
     when: monitor_with_vmagent | default(false)
+    become: true
   - role: vm_monitoring_agent
     when: monitor_with_vmagent | default(false)
+    become: true
