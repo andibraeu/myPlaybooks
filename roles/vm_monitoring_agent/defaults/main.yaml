@@ -1,7 +1,8 @@
-# Snap-only Setup
+# vmagent Setup
 vmagent_snap_name: vmagent
 vmagent_snap_channel: latest/stable
 vmagent_binary_path: /snap/vmagent/current/bin/vmagent
+vmagent_arm64_url: https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v1.124.0/vmutils-linux-arm64-v1.124.0.tar.gz
 
 # Remote write (per Inventory überschreiben!)
 vmauth_url: "https://vmauth.example.org/api/v1/write"
