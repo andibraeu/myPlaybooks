@@ -17,6 +17,12 @@ scrape_configs:
     static_configs: [{ targets: ["127.0.0.1:9119"] }]
 {% endif %}
 
+{% if (enable_smartctl_exporter is not none and enable_smartctl_exporter)|bool
+   or (enable_smartctl_exporter is none and auto_detect_exporters|default(true) and ansible_virtualization_type == 'physical') %}
+  - job_name: smartctl
+    static_configs: [{ targets: ["127.0.0.1:9633"] }]
+{% endif %}
+
 {% if (enable_mysql_exporter is not none and enable_mysql_exporter)|bool
    or (enable_mysql_exporter is none and auto_detect_exporters|default(true) and
        ('mariadb-server' in (ansible_facts.packages|default({})) or 'mysql-server' in (ansible_facts.packages|default({})))) %}

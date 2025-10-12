@@ -1,0 +1,20 @@
+[Unit]
+Description=Prometheus smartctl Exporter
+Documentation=https://github.com/prometheus-community/smartctl_exporter
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/local/bin/smartctl_exporter \
+  --web.listen-address=:9633 \
+  --smartctl.path=/usr/sbin/smartctl
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=smartctl_exporter
+
+[Install]
+WantedBy=multi-user.target

@@ -17,6 +17,7 @@
     # Manuelles Übersteuern (optional)
     enable_apache_exporter: null                  # true/false überschreibt Auto
     enable_bind_exporter:   null
+    enable_smartctl_exporter: auto                # true/false überschreibt Auto (nur auf echter Hardware)
     # node_exporter schlank halten
     node_exporter_disable_defaults: true
     node_exporter_enabled_collectors:
@@ -26,6 +27,8 @@
       - diskstats
       - netdev
       - loadavg
+      - hwmon
+      - systemd
       - textfile
   roles:
   - install_sudo

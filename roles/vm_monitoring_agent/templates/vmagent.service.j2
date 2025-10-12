@@ -11,7 +11,8 @@ ExecStart={{ vmagent_binary_path }} \
   -remoteWrite.basicAuth.username=${VM_USER} \
   -remoteWrite.basicAuth.password=${VM_PASS} \
   -remoteWrite.tmpDataPath=/var/lib/vmagent \
-  -remoteWrite.maxDiskUsagePerURL=5GB
+  -remoteWrite.maxDiskUsagePerURL=5GB \
+  -httpListenAddr=127.0.0.1:8429
 Restart=always
 RestartSec=5s
 

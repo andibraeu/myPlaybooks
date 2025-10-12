@@ -14,5 +14,8 @@
 - name: Restart bind9
   ansible.builtin.service: { name: bind9, state: restarted, enabled: true }
 
+- name: Restart smartctl_exporter
+  ansible.builtin.service: { name: smartctl_exporter, state: restarted, enabled: true }
+
 - name: Restart mysqld_exporter
   ansible.builtin.service: { name: prometheus-mysqld-exporter, state: restarted, enabled: true }
