@@ -100,22 +100,9 @@
   notify: Restart bind_exporter
 
 # ===== smartctl exporter (nur auf echter Hardware) ============================
-- name: Check if this is physical hardware (better detection)
-  ansible.builtin.stat:
-    path: /sys/class/block
-  register: block_devices_check
-
-- name: Check for physical block devices
-  ansible.builtin.find:
-    paths: /sys/class/block
-    patterns: ["sd*"]
-    file_type: link
-  register: physical_disks
-  when: block_devices_check.stat.exists
-
-- name: Decide enable_smartctl_exporter (physical hardware detection)
+- name: Decide enable_smartctl_exporter (using has_physical_disks from pre_tasks)
   ansible.builtin.set_fact:
-    _enable_smartctl_effective: "{{ (enable_smartctl_exporter | default(auto_detect_exporters)) and (physical_disks.matched > 0) }}"
+    _enable_smartctl_effective: "{{ (enable_smartctl_exporter | default(auto_detect_exporters)) and (has_physical_disks | default(false)) }}"
 
 - name: Install smartctl (smartmontools)
   ansible.builtin.apt:

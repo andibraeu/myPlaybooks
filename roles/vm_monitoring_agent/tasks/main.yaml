@@ -57,6 +57,7 @@
     state: directory
     mode: "0755"
 
+
 - name: Render scrape config (60s, lokale Exporter)
   ansible.builtin.template:
     src: scrape.yml.j2

@@ -3,7 +3,7 @@ global:
 
 scrape_configs:
   - job_name: node
-    static_configs: [{ targets: ["127.0.0.1:9100"] }]
+    static_configs: [{ targets: ["127.0.0.1:{{ node_exporter_port | default('9100') }}"] }]
 
 {% if (enable_apache_exporter is not none and enable_apache_exporter)|bool
    or (enable_apache_exporter is none and auto_detect_exporters|default(true) and 'apache2' in (ansible_facts.packages|default({}))) %}
@@ -18,7 +18,8 @@ scrape_configs:
 {% endif %}
 
 {% if (enable_smartctl_exporter is not none and enable_smartctl_exporter)|bool
-   or (enable_smartctl_exporter is none and auto_detect_exporters|default(true) and ansible_virtualization_type == 'physical') %}
+   or (enable_smartctl_exporter is none and auto_detect_exporters|default(true) and has_physical_disks|default(false))
+   or (enable_smartctl_exporter == 'auto' and auto_detect_exporters|default(true) and has_physical_disks|default(false)) %}
   - job_name: smartctl
     static_configs: [{ targets: ["127.0.0.1:9633"] }]
 {% endif %}
@@ -28,4 +29,12 @@ scrape_configs:
        ('mariadb-server' in (ansible_facts.packages|default({})) or 'mysql-server' in (ansible_facts.packages|default({})))) %}
   - job_name: mysqld
     static_configs: [{ targets: ["127.0.0.1:9104"] }]
+{% endif %}
+
+{% if custom_scrape_services is defined %}
+{% for service in custom_scrape_services %}
+  - job_name: "{{ service.name }}"
+    static_configs: [{ targets: ["{{ service.target }}"] }]
+    scrape_interval: "{{ service.interval | default('60s') }}"
+{% endfor %}
 {% endif %}

@@ -30,6 +30,24 @@
       - hwmon
       - systemd
       - textfile
+  pre_tasks:
+  - name: Check if this is physical hardware (for smartctl)
+    ansible.builtin.stat:
+      path: /sys/class/block
+    register: block_devices_check
+
+  - name: Check for physical block devices (for smartctl)
+    ansible.builtin.find:
+      paths: /sys/class/block
+      patterns: ["sd*"]
+      file_type: link
+    register: physical_disks
+    when: block_devices_check.stat.exists
+
+  - name: Set smartctl hardware detection fact
+    ansible.builtin.set_fact:
+      has_physical_disks: "{{ physical_disks.matched > 0 }}"
+
   roles:
   - install_sudo
   - add_admin_user
