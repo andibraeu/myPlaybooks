@@ -29,6 +29,7 @@
       - loadavg
       - hwmon
       - systemd
+      - os
       - textfile
   pre_tasks:
   - name: Check if this is physical hardware (for smartctl)
