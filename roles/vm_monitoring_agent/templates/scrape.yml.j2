@@ -31,6 +31,42 @@ scrape_configs:
     static_configs: [{ targets: ["127.0.0.1:9104"] }]
 {% endif %}
 
+{% if (enable_blackbox_exporter is not none and enable_blackbox_exporter)|bool %}
+  - job_name: blackbox_icmp
+    metrics_path: /probe
+    params:
+      module: [icmp]
+    static_configs:
+      - targets: {{ blackbox_icmp_targets | default([]) }}
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - target_label: __address__
+        replacement: 127.0.0.1:{{ blackbox_exporter_port | default('9115') }}
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: job
+        replacement: blackbox_icmp
+    scrape_interval: 60s
+
+  - job_name: blackbox_http
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets: {{ blackbox_http_targets | default([]) }}
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - target_label: __address__
+        replacement: 127.0.0.1:{{ blackbox_exporter_port | default('9115') }}
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: job
+        replacement: blackbox_http
+    scrape_interval: 60s
+{% endif %}
+
 {% if custom_scrape_services is defined %}
 {% for service in custom_scrape_services %}
   - job_name: "{{ service.name }}"

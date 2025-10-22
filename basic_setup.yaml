@@ -18,6 +18,7 @@
     enable_apache_exporter: null                  # true/false überschreibt Auto
     enable_bind_exporter:   null
     enable_smartctl_exporter: auto                # true/false überschreibt Auto (nur auf echter Hardware)
+    enable_blackbox_exporter: null                # true/false überschreibt Auto (nur auf externen Monitoring-Servern)
     # node_exporter schlank halten
     node_exporter_disable_defaults: true
     node_exporter_enabled_collectors:
@@ -48,6 +49,20 @@
   - name: Set smartctl hardware detection fact
     ansible.builtin.set_fact:
       has_physical_disks: "{{ physical_disks.matched > 0 }}"
+
+  - name: Generate ICMP targets from inventory for Blackbox Exporter
+    ansible.builtin.set_fact:
+      blackbox_icmp_targets: "{{ groups['debian-based'] | map('extract', hostvars, 'ansible_fqdn') | select('defined') | list }}"
+    run_once: true
+    delegate_to: "{{ inventory_hostname }}"
+    when: enable_blackbox_exporter | default(false)
+
+  - name: Generate ICMP targets from inventory for Blackbox Exporter (fallback to inventory_hostname)
+    ansible.builtin.set_fact:
+      blackbox_icmp_targets: "{{ groups['debian-based'] | map('extract', hostvars, 'inventory_hostname') | list }}"
+    run_once: true
+    delegate_to: "{{ inventory_hostname }}"
+    when: enable_blackbox_exporter | default(false) and blackbox_icmp_targets | length == 0
 
   roles:
   - install_sudo

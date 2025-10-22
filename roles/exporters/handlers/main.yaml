@@ -19,3 +19,6 @@
 
 - name: Restart mysqld_exporter
   ansible.builtin.service: { name: prometheus-mysqld-exporter, state: restarted, enabled: true }
+
+- name: Restart blackbox_exporter
+  ansible.builtin.service: { name: prometheus-blackbox-exporter, state: restarted, enabled: true }
