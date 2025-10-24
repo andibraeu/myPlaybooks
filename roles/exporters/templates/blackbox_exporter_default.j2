@@ -1,8 +1,5 @@
 # Configuration for blackbox_exporter
 # This file is managed by Ansible
 
-# Blackbox exporter configuration file
-BLACKBOX_CONFIG_FILE="/etc/prometheus/blackbox.yml"
-
 # Additional command line options
-BLACKBOX_OPTS="--config.file=${BLACKBOX_CONFIG_FILE} --web.listen-address=:{{ blackbox_exporter_port | default('9115') }}"
+ARGS="--web.config.file=/etc/prometheus/blackbox.yml --web.listen-address=127.0.0.1:{{ blackbox_exporter_port | default('9115') }}"

@@ -198,7 +198,23 @@
 # ===== Blackbox exporter (manual activation) ===============================
 - name: Decide enable_blackbox_exporter (manual activation)
   ansible.builtin.set_fact:
-    _enable_blackbox_effective: "{{ enable_blackbox_exporter | default(false) }}"
+    _enable_blackbox_effective: "{{ enable_blackbox_exporter | default(false) | bool }}"
+
+- name: Generate ICMP targets from inventory for Blackbox Exporter
+  ansible.builtin.set_fact:
+    blackbox_icmp_targets: >-
+      {%- set targets = [] -%}
+      {%- for host in groups['debian-based'] -%}
+        {%- if hostvars[host]['external_fqdn'] is defined -%}
+          {%- set _ = targets.append(hostvars[host]['external_fqdn']) -%}
+        {%- else -%}
+          {%- set _ = targets.append(hostvars[host]['inventory_hostname']) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ targets | unique }}
+  run_once: true
+  delegate_to: "{{ inventory_hostname }}"
+  when: _enable_blackbox_effective | bool
 
 - name: Install blackbox exporter
   ansible.builtin.apt:
