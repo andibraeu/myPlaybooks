@@ -1,0 +1,36 @@
+---
+# ===== BIND exporter (auto-oder-manual) =======================================
+- name: Decide enable_bind_exporter (auto-detect)
+  ansible.builtin.set_fact:
+    _enable_bind_effective: "{{ enable_bind_exporter
+                                if enable_bind_exporter is not none
+                                else (auto_detect_exporters and ('bind9' in ansible_facts.packages)) }}"
+
+- name: Install bind exporter
+  ansible.builtin.apt:
+    name: prometheus-bind-exporter
+    state: present
+  when: _enable_bind_effective | bool
+
+- name: Deploy BIND statistics channel include (127.0.0.1:8053)
+  ansible.builtin.template:
+    src: named-statistics.conf.j2
+    dest: /etc/bind/named.conf.statistics
+    mode: "0644"
+  when: _enable_bind_effective | bool
+  notify: Restart bind9
+
+- name: Ensure statistics include referenced
+  ansible.builtin.lineinfile:
+    path: /etc/bind/named.conf.local
+    line: 'include "/etc/bind/named.conf.statistics";'
+    insertafter: EOF
+  when: _enable_bind_effective | bool
+  notify: Restart bind9
+
+- name: Configure bind exporter defaults
+  ansible.builtin.template:
+    src: bind_exporter_default.j2
+    dest: /etc/default/prometheus-bind-exporter
+  when: _enable_bind_effective | bool
+  notify: Restart bind_exporter

@@ -31,7 +31,7 @@ scrape_configs:
     static_configs: [{ targets: ["127.0.0.1:9104"] }]
 {% endif %}
 
-{% if (enable_blackbox_exporter is not none and enable_blackbox_exporter)|bool %}
+{% if (enable_blackbox_exporter is defined and enable_blackbox_exporter)|bool %}
   - job_name: blackbox_icmp
     metrics_path: /probe
     params:

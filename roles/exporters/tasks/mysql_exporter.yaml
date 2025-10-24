@@ -1,0 +1,39 @@
+---
+# ===== MySQL/MariaDB exporter (auto-oder-manual) ==============================
+- name: Decide enable_mysql_exporter (auto-detect)
+  ansible.builtin.set_fact:
+    _enable_mysql_effective: "{{ enable_mysql_exporter
+                                 if enable_mysql_exporter is not none
+                                 else (auto_detect_exporters and
+                                       ( 'mariadb-server' in ansible_facts.packages or
+                                         'mysql-server'  in ansible_facts.packages )) }}"
+
+- name: Install mysqld exporter
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: true
+  loop:
+    - python3-pymysql
+    - prometheus-mysqld-exporter
+  when: _enable_mysql_effective | bool
+
+# optional: Exporter-User anlegen (per Unix-Socket)
+- name: Create MySQL exporter user/grants
+  community.mysql.mysql_query:
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    query:
+      - "CREATE USER IF NOT EXISTS '{{ mysql_exporter_user|default('prom_exporter') }}'@'localhost' IDENTIFIED BY '{{ mysql_exporter_password|default('CHANGEME') }}';"
+      - "GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO '{{ mysql_exporter_user|default('prom_exporter') }}'@'localhost';"
+      - "GRANT SELECT ON performance_schema.* TO '{{ mysql_exporter_user|default('prom_exporter') }}'@'localhost';"
+      - "FLUSH PRIVILEGES;"
+  when: _enable_mysql_effective | bool
+  become: true
+
+- name: Configure mysqld exporter defaults (socket auth)
+  ansible.builtin.template:
+    src: mysqld_exporter_default.j2
+    dest: /etc/default/prometheus-mysqld-exporter
+    mode: "0640"
+  when: _enable_mysql_effective | bool
+  notify: Restart mysqld_exporter

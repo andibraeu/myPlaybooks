@@ -1,0 +1,63 @@
+---
+# ===== Blackbox exporter (manual activation) ===============================
+- name: Decide enable_blackbox_exporter (manual activation)
+  ansible.builtin.set_fact:
+    _enable_blackbox_effective: "{{ enable_blackbox_exporter | default(false) | bool }}"
+
+- name: Generate ICMP targets from inventory for Blackbox Exporter
+  ansible.builtin.set_fact:
+    blackbox_icmp_targets: >-
+      {%- set targets = [] -%}
+      {%- for host in groups['debian-based'] -%}
+        {%- if hostvars[host]['external_fqdn'] is defined -%}
+          {%- set _ = targets.append(hostvars[host]['external_fqdn']) -%}
+        {%- else -%}
+          {%- set _ = targets.append(hostvars[host]['inventory_hostname']) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ targets | unique }}
+  run_once: true
+  delegate_to: "{{ inventory_hostname }}"
+  when: _enable_blackbox_effective | bool
+
+- name: Install blackbox exporter
+  ansible.builtin.apt:
+    name: prometheus-blackbox-exporter
+    state: present
+    update_cache: true
+  when: _enable_blackbox_effective | bool
+
+- name: Ensure prometheus config directory exists
+  ansible.builtin.file:
+    path: /etc/prometheus
+    state: directory
+    mode: "0755"
+    owner: prometheus
+    group: prometheus
+  when: _enable_blackbox_effective | bool
+
+- name: Deploy blackbox configuration
+  ansible.builtin.template:
+    src: blackbox.yml.j2
+    dest: /etc/prometheus/blackbox.yml
+    mode: "0644"
+    owner: prometheus
+    group: prometheus
+  when: _enable_blackbox_effective | bool
+  notify: Restart blackbox_exporter
+
+- name: Configure blackbox exporter defaults
+  ansible.builtin.template:
+    src: blackbox_exporter_default.j2
+    dest: /etc/default/prometheus-blackbox-exporter
+    mode: "0644"
+  when: _enable_blackbox_effective | bool
+  notify: Restart blackbox_exporter
+
+- name: Configure blackbox exporter service
+  ansible.builtin.systemd:
+    name: prometheus-blackbox-exporter
+    state: started
+    enabled: true
+    daemon_reload: true
+  when: _enable_blackbox_effective | bool

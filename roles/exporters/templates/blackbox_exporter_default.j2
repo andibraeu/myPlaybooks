@@ -2,4 +2,5 @@
 # This file is managed by Ansible
 
 # Additional command line options
-ARGS="--web.config.file=/etc/prometheus/blackbox.yml --web.listen-address=127.0.0.1:{{ blackbox_exporter_port | default('9115') }}"
+# ICMP probes require root privileges
+ARGS="--config.file=/etc/prometheus/blackbox.yml --web.listen-address=127.0.0.1:{{ blackbox_exporter_port | default('9115') }}"

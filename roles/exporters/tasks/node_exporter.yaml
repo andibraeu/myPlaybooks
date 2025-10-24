@@ -1,0 +1,14 @@
+---
+# ===== node_exporter (immer sinnvoll) =========================================
+- name: Install node_exporter
+  ansible.builtin.apt:
+    name: prometheus-node-exporter
+    state: present
+    update_cache: true
+
+- name: Configure node_exporter defaults
+  ansible.builtin.template:
+    src: node_exporter_default.j2
+    dest: /etc/default/prometheus-node-exporter
+    mode: "0644"
+  notify: Restart node_exporter

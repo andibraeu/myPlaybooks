@@ -1,259 +1,33 @@
 ---
+# ===== Prometheus Exporters Setup =============================================
+# Diese Datei koordiniert die Installation und Konfiguration verschiedener
+# Prometheus Exporters. Jeder Exporter-Typ ist in eine separate Datei ausgelagert
+# für bessere Übersichtlichkeit und Wartbarkeit.
+
 - name: Gather installed packages
   ansible.builtin.package_facts:
     manager: auto
 
-# ===== node_exporter (immer sinnvoll) =========================================
-- name: Install node_exporter
-  ansible.builtin.apt:
-    name: prometheus-node-exporter
-    state: present
-    update_cache: true
+# ===== Node Exporter (immer installiert) =====================================
+- name: Include node_exporter tasks
+  ansible.builtin.include_tasks: node_exporter.yaml
 
-- name: Configure node_exporter defaults
-  ansible.builtin.template:
-    src: node_exporter_default.j2
-    dest: /etc/default/prometheus-node-exporter
-    mode: "0644"
-  notify: Restart node_exporter
+# ===== Apache Exporter (auto-detect oder manuell) ===========================
+- name: Include apache_exporter tasks
+  ansible.builtin.include_tasks: apache_exporter.yaml
 
-# ===== Apache exporter (auto-oder-manual) =====================================
-- name: Decide enable_apache_exporter (auto-detect)
-  ansible.builtin.set_fact:
-    _enable_apache_effective: "{{ enable_apache_exporter
-                                  if enable_apache_exporter is not none
-                                  else (auto_detect_exporters and ('apache2' in ansible_facts.packages)) }}"
+# ===== BIND Exporter (auto-detect oder manuell) =============================
+- name: Include bind_exporter tasks
+  ansible.builtin.include_tasks: bind_exporter.yaml
 
-- name: Install apache exporter
-  ansible.builtin.apt:
-    name: prometheus-apache-exporter
-    state: present
-  when: _enable_apache_effective | bool
+# ===== Smartctl Exporter (nur auf echter Hardware) =========================
+- name: Include smartctl_exporter tasks
+  ansible.builtin.include_tasks: smartctl_exporter.yaml
 
-- name: Ensure Apache mod_status only on localhost
-  ansible.builtin.copy:
-    dest: /etc/apache2/conf-available/prometheus-status.conf
-    mode: "0644"
-    content: |
-      <Location /server-status>
-        SetHandler server-status
-        Require local
-      </Location>
-  when: _enable_apache_effective | bool
-  notify: Reload apache2
+# ===== MySQL/MariaDB Exporter (auto-detect oder manuell) ===================
+- name: Include mysql_exporter tasks
+  ansible.builtin.include_tasks: mysql_exporter.yaml
 
-- name: Enable status config
-  ansible.builtin.command: a2enconf prometheus-status
-  register: _a2enconf
-  changed_when: "'Enabling conf prometheus-status' in _a2enconf.stdout"
-  when: _enable_apache_effective | bool
-  notify: Reload apache2
-
-- name: Enable mod_status
-  community.general.apache2_module:
-    name: status
-    state: present
-  when: _enable_apache_effective | bool
-  notify: Reload apache2
-
-- name: Configure apache exporter defaults
-  ansible.builtin.template:
-    src: apache_exporter_default.j2
-    dest: /etc/default/prometheus-apache-exporter
-  when: _enable_apache_effective | bool
-  notify: Restart apache_exporter
-
-# ===== BIND exporter (auto-oder-manual) =======================================
-- name: Decide enable_bind_exporter (auto-detect)
-  ansible.builtin.set_fact:
-    _enable_bind_effective: "{{ enable_bind_exporter
-                                if enable_bind_exporter is not none
-                                else (auto_detect_exporters and ('bind9' in ansible_facts.packages)) }}"
-
-- name: Install bind exporter
-  ansible.builtin.apt:
-    name: prometheus-bind-exporter
-    state: present
-  when: _enable_bind_effective | bool
-
-- name: Deploy BIND statistics channel include (127.0.0.1:8053)
-  ansible.builtin.template:
-    src: named-statistics.conf.j2
-    dest: /etc/bind/named.conf.statistics
-    mode: "0644"
-  when: _enable_bind_effective | bool
-  notify: Restart bind9
-
-- name: Ensure statistics include referenced
-  ansible.builtin.lineinfile:
-    path: /etc/bind/named.conf.local
-    line: 'include "/etc/bind/named.conf.statistics";'
-    insertafter: EOF
-  when: _enable_bind_effective | bool
-  notify: Restart bind9
-
-- name: Configure bind exporter defaults
-  ansible.builtin.template:
-    src: bind_exporter_default.j2
-    dest: /etc/default/prometheus-bind-exporter
-  when: _enable_bind_effective | bool
-  notify: Restart bind_exporter
-
-# ===== smartctl exporter (nur auf echter Hardware) ============================
-- name: Decide enable_smartctl_exporter (using has_physical_disks from pre_tasks)
-  ansible.builtin.set_fact:
-    _enable_smartctl_effective: "{{ (enable_smartctl_exporter | default(auto_detect_exporters)) and (has_physical_disks | default(false)) }}"
-
-- name: Install smartctl (smartmontools)
-  ansible.builtin.apt:
-    name: smartmontools
-    state: present
-    update_cache: true
-  when: _enable_smartctl_effective | bool
-
-
-- name: Set smartctl exporter architecture
-  ansible.builtin.set_fact:
-    smartctl_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
-
-- name: Download smartctl exporter binary
-  ansible.builtin.get_url:
-    url: "https://github.com/prometheus-community/smartctl_exporter/releases/download/v0.14.0/smartctl_exporter-0.14.0.linux-{{ smartctl_arch }}.tar.gz"
-    dest: /tmp/smartctl_exporter.tar.gz
-    mode: '0644'
-  when: _enable_smartctl_effective | bool
-
-- name: Extract smartctl exporter binary
-  ansible.builtin.unarchive:
-    src: /tmp/smartctl_exporter.tar.gz
-    dest: /tmp/
-    remote_src: yes
-    extra_opts: [--strip-components=1]
-  when: _enable_smartctl_effective | bool
-
-- name: Install smartctl exporter binary
-  ansible.builtin.copy:
-    src: /tmp/smartctl_exporter
-    dest: /usr/local/bin/smartctl_exporter
-    mode: '0755'
-    owner: root
-    group: root
-    remote_src: yes
-  when: _enable_smartctl_effective | bool
-
-- name: Install smartctl exporter systemd service
-  ansible.builtin.template:
-    src: smartctl_exporter.service.j2
-    dest: /etc/systemd/system/smartctl_exporter.service
-    mode: "0644"
-  when: _enable_smartctl_effective | bool
-  notify: Daemon reload
-
-- name: Enable and start smartctl exporter
-  ansible.builtin.systemd:
-    name: smartctl_exporter
-    state: started
-    enabled: true
-  when: _enable_smartctl_effective | bool
-
-# ===== MySQL/MariaDB exporter (auto-oder-manual) ==============================
-- name: Decide enable_mysql_exporter (auto-detect)
-  ansible.builtin.set_fact:
-    _enable_mysql_effective: "{{ enable_mysql_exporter
-                                 if enable_mysql_exporter is not none
-                                 else (auto_detect_exporters and
-                                       ( 'mariadb-server' in ansible_facts.packages or
-                                         'mysql-server'  in ansible_facts.packages )) }}"
-
-- name: Install mysqld exporter
-  ansible.builtin.apt:
-    name: "{{ item }}"
-    state: present
-    update_cache: true
-  loop:
-    - python3-pymysql
-    - prometheus-mysqld-exporter
-  when: _enable_mysql_effective | bool
-
-# optional: Exporter-User anlegen (per Unix-Socket)
-- name: Create MySQL exporter user/grants
-  community.mysql.mysql_query:
-    login_unix_socket: /var/run/mysqld/mysqld.sock
-    query:
-      - "CREATE USER IF NOT EXISTS '{{ mysql_exporter_user|default('prom_exporter') }}'@'localhost' IDENTIFIED BY '{{ mysql_exporter_password|default('CHANGEME') }}';"
-      - "GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO '{{ mysql_exporter_user|default('prom_exporter') }}'@'localhost';"
-      - "GRANT SELECT ON performance_schema.* TO '{{ mysql_exporter_user|default('prom_exporter') }}'@'localhost';"
-      - "FLUSH PRIVILEGES;"
-  when: _enable_mysql_effective | bool
-  become: true
-
-- name: Configure mysqld exporter defaults (socket auth)
-  ansible.builtin.template:
-    src: mysqld_exporter_default.j2
-    dest: /etc/default/prometheus-mysqld-exporter
-    mode: "0640"
-  when: _enable_mysql_effective | bool
-  notify: Restart mysqld_exporter
-
-# ===== Blackbox exporter (manual activation) ===============================
-- name: Decide enable_blackbox_exporter (manual activation)
-  ansible.builtin.set_fact:
-    _enable_blackbox_effective: "{{ enable_blackbox_exporter | default(false) | bool }}"
-
-- name: Generate ICMP targets from inventory for Blackbox Exporter
-  ansible.builtin.set_fact:
-    blackbox_icmp_targets: >-
-      {%- set targets = [] -%}
-      {%- for host in groups['debian-based'] -%}
-        {%- if hostvars[host]['external_fqdn'] is defined -%}
-          {%- set _ = targets.append(hostvars[host]['external_fqdn']) -%}
-        {%- else -%}
-          {%- set _ = targets.append(hostvars[host]['inventory_hostname']) -%}
-        {%- endif -%}
-      {%- endfor -%}
-      {{ targets | unique }}
-  run_once: true
-  delegate_to: "{{ inventory_hostname }}"
-  when: _enable_blackbox_effective | bool
-
-- name: Install blackbox exporter
-  ansible.builtin.apt:
-    name: prometheus-blackbox-exporter
-    state: present
-    update_cache: true
-  when: _enable_blackbox_effective | bool
-
-- name: Ensure prometheus config directory exists
-  ansible.builtin.file:
-    path: /etc/prometheus
-    state: directory
-    mode: "0755"
-    owner: prometheus
-    group: prometheus
-  when: _enable_blackbox_effective | bool
-
-- name: Deploy blackbox configuration
-  ansible.builtin.template:
-    src: blackbox.yml.j2
-    dest: /etc/prometheus/blackbox.yml
-    mode: "0644"
-    owner: prometheus
-    group: prometheus
-  when: _enable_blackbox_effective | bool
-  notify: Restart blackbox_exporter
-
-- name: Configure blackbox exporter defaults
-  ansible.builtin.template:
-    src: blackbox_exporter_default.j2
-    dest: /etc/default/prometheus-blackbox-exporter
-    mode: "0644"
-  when: _enable_blackbox_effective | bool
-  notify: Restart blackbox_exporter
-
-- name: Configure blackbox exporter service
-  ansible.builtin.systemd:
-    name: prometheus-blackbox-exporter
-    state: started
-    enabled: true
-    daemon_reload: true
-  when: _enable_blackbox_effective | bool
+# ===== Blackbox Exporter (manuelle Aktivierung) =============================
+- name: Include blackbox_exporter tasks
+  ansible.builtin.include_tasks: blackbox_exporter.yaml

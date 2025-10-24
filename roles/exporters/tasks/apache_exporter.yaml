@@ -1,0 +1,46 @@
+---
+# ===== Apache exporter (auto-oder-manual) =====================================
+- name: Decide enable_apache_exporter (auto-detect)
+  ansible.builtin.set_fact:
+    _enable_apache_effective: "{{ enable_apache_exporter
+                                  if enable_apache_exporter is not none
+                                  else (auto_detect_exporters and ('apache2' in ansible_facts.packages)) }}"
+
+- name: Install apache exporter
+  ansible.builtin.apt:
+    name: prometheus-apache-exporter
+    state: present
+  when: _enable_apache_effective | bool
+
+- name: Ensure Apache mod_status only on localhost
+  ansible.builtin.copy:
+    dest: /etc/apache2/conf-available/prometheus-status.conf
+    mode: "0644"
+    content: |
+      <Location /server-status>
+        SetHandler server-status
+        Require local
+      </Location>
+  when: _enable_apache_effective | bool
+  notify: Reload apache2
+
+- name: Enable status config
+  ansible.builtin.command: a2enconf prometheus-status
+  register: _a2enconf
+  changed_when: "'Enabling conf prometheus-status' in _a2enconf.stdout"
+  when: _enable_apache_effective | bool
+  notify: Reload apache2
+
+- name: Enable mod_status
+  community.general.apache2_module:
+    name: status
+    state: present
+  when: _enable_apache_effective | bool
+  notify: Reload apache2
+
+- name: Configure apache exporter defaults
+  ansible.builtin.template:
+    src: apache_exporter_default.j2
+    dest: /etc/default/prometheus-apache-exporter
+  when: _enable_apache_effective | bool
+  notify: Restart apache_exporter
