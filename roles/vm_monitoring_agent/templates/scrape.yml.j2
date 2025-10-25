@@ -40,15 +40,15 @@ scrape_configs:
     params:
       module: [icmp]
     static_configs:
-      - targets: 
-        {%- for target in blackbox_icmp_targets | default([]) %}
-        - "{{ target.target }}"
-        {%- endfor %}
+
+      {%- for host in groups['debian-based'] %}
+
+      - targets:
+        - "{{ hostvars[host]['external_fqdn'] | default(hostvars[host]['inventory_hostname']) }}"
         labels:
-          {%- for target in blackbox_icmp_targets | default([]) %}
-          - "{{ target.target }}":
-              server_group: "{{ target.labels.server_group }}"
-          {%- endfor %}
+          server_group: "{{ hostvars[host]['server_group'] | default('unknown') }}"
+      {%- endfor %}
+
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

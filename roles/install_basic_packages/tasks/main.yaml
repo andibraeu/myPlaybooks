@@ -63,6 +63,12 @@
   failed_when: false
   changed_when: false
 
+- name: Check if MySQL filter files exist
+  ansible.builtin.stat:
+    path: /etc/fail2ban/filter.d/mysqld-auth.conf
+  register: mysql_filter_check
+  when: mysql_check.rc == 0
+
 - name: Configure fail2ban Apache jails
   ansible.builtin.template:
     src: jail-apache.j2
@@ -83,7 +89,7 @@
     mode: '0644'
   become: true
   notify: Restart fail2ban
-  when: mysql_check.rc == 0
+  when: mysql_check.rc == 0 and mysql_filter_check.stat.exists
 
 # Import chezmoi tasks from separate file
 - name: Setup chezmoi
