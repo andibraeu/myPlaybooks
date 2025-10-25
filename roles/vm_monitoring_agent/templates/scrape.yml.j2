@@ -40,7 +40,15 @@ scrape_configs:
     params:
       module: [icmp]
     static_configs:
-      - targets: {{ blackbox_icmp_targets | default([]) }}
+      - targets: 
+        {%- for target in blackbox_icmp_targets | default([]) %}
+        - "{{ target.target }}"
+        {%- endfor %}
+        labels:
+          {%- for target in blackbox_icmp_targets | default([]) %}
+          - "{{ target.target }}":
+              server_group: "{{ target.labels.server_group }}"
+          {%- endfor %}
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

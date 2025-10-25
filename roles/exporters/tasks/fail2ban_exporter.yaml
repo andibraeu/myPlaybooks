@@ -1,27 +1,46 @@
 ---
 # ===== Fail2Ban exporter (immer installiert) ===================================
+- name: Include fail2ban exporter variables
+  ansible.builtin.include_vars: "fail2ban_exporter_{{ fail2ban_exporter_version | default('v0.10.3') }}.yml"
+
 - name: Set fail2ban exporter architecture
   ansible.builtin.set_fact:
     fail2ban_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else ('arm64' if ansible_architecture == 'aarch64' else ansible_architecture) }}"
+
+- name: Check if fail2ban exporter binary exists
+  ansible.builtin.stat:
+    path: /usr/local/bin/fail2ban_exporter
+  register: fail2ban_binary_stat
+
+- name: Check current version of fail2ban exporter
+  ansible.builtin.shell: /usr/local/bin/fail2ban_exporter --version
+  register: current_version
+  when: fail2ban_binary_stat.stat.exists
+  failed_when: false
+
+- name: Set fact for whether binary needs update
+  ansible.builtin.set_fact:
+    fail2ban_needs_update: "{{ not fail2ban_binary_stat.stat.exists or (current_version.stdout | default('') | regex_search('^' + fail2ban_exporter_version + '$', multiline=True) | length == 0) }}"
 
 - name: Create temporary directory for fail2ban exporter
   ansible.builtin.file:
     path: /tmp/fail2ban_exporter
     state: directory
     mode: '0755'
+  when: fail2ban_needs_update | bool
 
 - name: Download fail2ban exporter binary
   ansible.builtin.shell: |
     curl -L -o /tmp/fail2ban_exporter.tar.gz \
-      "https://gitlab.com/hctrdev/fail2ban-prometheus-exporter/-/releases/v0.10.3/downloads/fail2ban_exporter_0.10.3_linux_{{ fail2ban_arch }}.tar.gz"
-  args:
-    creates: /tmp/fail2ban_exporter.tar.gz
+      "{{ fail2ban_exporter_download_url }}"
+  when: fail2ban_needs_update | bool
 
 - name: Extract fail2ban exporter binary
   ansible.builtin.unarchive:
     src: /tmp/fail2ban_exporter.tar.gz
     dest: /tmp/fail2ban_exporter/
     remote_src: yes
+  when: fail2ban_needs_update | bool
 
 - name: Find extracted fail2ban exporter binary
   ansible.builtin.find:
@@ -29,6 +48,7 @@
     patterns: "fail2ban_exporter"
     file_type: file
   register: fail2ban_binary
+  when: fail2ban_needs_update | bool
 
 - name: Install fail2ban exporter binary
   ansible.builtin.copy:
@@ -38,6 +58,7 @@
     owner: root
     group: root
     remote_src: yes
+  when: fail2ban_needs_update | bool
 
 - name: Clean up temporary files
   ansible.builtin.file:
@@ -46,6 +67,7 @@
   loop:
     - /tmp/fail2ban_exporter.tar.gz
     - /tmp/fail2ban_exporter
+  when: fail2ban_needs_update | bool
 
 - name: Install fail2ban exporter systemd service
   ansible.builtin.template:

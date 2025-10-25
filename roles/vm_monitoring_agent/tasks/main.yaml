@@ -57,16 +57,18 @@
     state: directory
     mode: "0755"
 
-- name: Generate ICMP targets from inventory for Blackbox Exporter
+- name: Generate ICMP targets with individual labels from inventory for Blackbox Exporter
   ansible.builtin.set_fact:
     blackbox_icmp_targets: >-
       {%- set targets = [] -%}
       {%- for host in groups['debian-based'] -%}
-        {%- if hostvars[host]['external_fqdn'] is defined -%}
-          {%- set _ = targets.append(hostvars[host]['external_fqdn']) -%}
-        {%- else -%}
-          {%- set _ = targets.append(hostvars[host]['inventory_hostname']) -%}
-        {%- endif -%}
+        {%- set target_obj = {
+          'target': hostvars[host]['external_fqdn'] | default(hostvars[host]['inventory_hostname']),
+          'labels': {
+            'server_group': hostvars[host]['server_group'] | default('unknown')
+          }
+        } -%}
+        {%- set _ = targets.append(target_obj) -%}
       {%- endfor -%}
       {{ targets | unique }}
   run_once: true

@@ -51,6 +51,40 @@
   become: true
   notify: Restart fail2ban
 
+- name: Check if Apache is installed
+  ansible.builtin.command: dpkg -l apache2
+  register: apache_check
+  failed_when: false
+  changed_when: false
+
+- name: Check if MySQL server is installed
+  ansible.builtin.shell: dpkg -l mysql-server || dpkg -l mariadb-server
+  register: mysql_check
+  failed_when: false
+  changed_when: false
+
+- name: Configure fail2ban Apache jails
+  ansible.builtin.template:
+    src: jail-apache.j2
+    dest: /etc/fail2ban/jail.d/apache.conf
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: Restart fail2ban
+  when: apache_check.rc == 0
+
+- name: Configure fail2ban MySQL jails
+  ansible.builtin.template:
+    src: jail-mysql.j2
+    dest: /etc/fail2ban/jail.d/mysql.conf
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: Restart fail2ban
+  when: mysql_check.rc == 0
+
 # Import chezmoi tasks from separate file
 - name: Setup chezmoi
   ansible.builtin.import_tasks: chezmoi.yaml

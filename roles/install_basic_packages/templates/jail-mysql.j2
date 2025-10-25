@@ -1,0 +1,18 @@
+# MySQL/MariaDB fail2ban jails
+# Automatically configured by Ansible
+
+[mysql-auth]
+enabled = true
+port = 3306
+logpath = /var/log/mysql/*error.log
+maxretry = 3
+bantime = 3600
+findtime = 600
+
+[mysqld-auth]
+enabled = true
+port = 3306
+logpath = /var/log/mysql/*error.log
+maxretry = 3
+bantime = 3600
+findtime = 600

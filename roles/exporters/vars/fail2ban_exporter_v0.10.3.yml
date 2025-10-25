@@ -1,0 +1,13 @@
+---
+# Fail2Ban Exporter v0.10.3 Checksums
+# Source: https://gitlab.com/hctrdev/fail2ban-prometheus-exporter/-/releases/v0.10.3/downloads/fail2ban_exporter_0.10.3_checksums.txt
+
+fail2ban_exporter_version: "0.10.3"
+fail2ban_exporter_checksums:
+  amd64: "85733a343048090dba169226a8ca0b59b9cfecb9eaa163014a94146f04116e34"
+  arm64: "d7955cd0292dd0f504087b22a90cc1e9121d6150dc52076f2c6f1fbfd50e2f9e"
+  armv6: "f6e23604cb4e6682cc6d893f4ec8c3a121a7a443e9fd807d4ddb461331af3b3f"
+  armv7: "4f0816a0722ca7d44596acc9fd8a3993793ff3e0a30f287fa15851f91f477645"
+  "386": "a53b164b73af54d5fda3a0d8a96efe45b39b7c48cb4173611a530020010a0a99"
+
+fail2ban_exporter_download_url: "https://gitlab.com/hctrdev/fail2ban-prometheus-exporter/-/releases/v{{ fail2ban_exporter_version }}/downloads/fail2ban_exporter_{{ fail2ban_exporter_version }}_linux_{{ fail2ban_arch }}.tar.gz"
