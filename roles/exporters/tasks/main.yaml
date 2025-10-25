@@ -31,3 +31,7 @@
 # ===== Blackbox Exporter (manuelle Aktivierung) =============================
 - name: Include blackbox_exporter tasks
   ansible.builtin.include_tasks: blackbox_exporter.yaml
+
+# ===== Fail2Ban Exporter (immer installiert) ================================
+- name: Include fail2ban_exporter tasks
+  ansible.builtin.include_tasks: fail2ban_exporter.yaml

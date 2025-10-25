@@ -22,3 +22,6 @@
 
 - name: Restart blackbox_exporter
   ansible.builtin.service: { name: prometheus-blackbox-exporter, state: restarted, enabled: true }
+
+- name: Restart fail2ban_exporter
+  ansible.builtin.service: { name: fail2ban_exporter, state: restarted, enabled: true }

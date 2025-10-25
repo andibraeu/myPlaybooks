@@ -1,0 +1,19 @@
+[Unit]
+Description=Prometheus Fail2Ban Exporter
+Documentation=https://gitlab.com/hctrdev/fail2ban-prometheus-exporter
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/local/bin/fail2ban_exporter \
+  --web.listen-address=:9191
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fail2ban_exporter
+
+[Install]
+WantedBy=multi-user.target

@@ -57,6 +57,21 @@
     state: directory
     mode: "0755"
 
+- name: Generate ICMP targets from inventory for Blackbox Exporter
+  ansible.builtin.set_fact:
+    blackbox_icmp_targets: >-
+      {%- set targets = [] -%}
+      {%- for host in groups['debian-based'] -%}
+        {%- if hostvars[host]['external_fqdn'] is defined -%}
+          {%- set _ = targets.append(hostvars[host]['external_fqdn']) -%}
+        {%- else -%}
+          {%- set _ = targets.append(hostvars[host]['inventory_hostname']) -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {{ targets | unique }}
+  run_once: true
+  delegate_to: "{{ inventory_hostname }}"
+
 
 - name: Render scrape config (60s, lokale Exporter)
   ansible.builtin.template:

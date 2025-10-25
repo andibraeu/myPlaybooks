@@ -1,0 +1,62 @@
+---
+# ===== Fail2Ban exporter (immer installiert) ===================================
+- name: Set fail2ban exporter architecture
+  ansible.builtin.set_fact:
+    fail2ban_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else ('arm64' if ansible_architecture == 'aarch64' else ansible_architecture) }}"
+
+- name: Create temporary directory for fail2ban exporter
+  ansible.builtin.file:
+    path: /tmp/fail2ban_exporter
+    state: directory
+    mode: '0755'
+
+- name: Download fail2ban exporter binary
+  ansible.builtin.shell: |
+    curl -L -o /tmp/fail2ban_exporter.tar.gz \
+      "https://gitlab.com/hctrdev/fail2ban-prometheus-exporter/-/releases/v0.10.3/downloads/fail2ban_exporter_0.10.3_linux_{{ fail2ban_arch }}.tar.gz"
+  args:
+    creates: /tmp/fail2ban_exporter.tar.gz
+
+- name: Extract fail2ban exporter binary
+  ansible.builtin.unarchive:
+    src: /tmp/fail2ban_exporter.tar.gz
+    dest: /tmp/fail2ban_exporter/
+    remote_src: yes
+
+- name: Find extracted fail2ban exporter binary
+  ansible.builtin.find:
+    paths: /tmp/fail2ban_exporter
+    patterns: "fail2ban_exporter"
+    file_type: file
+  register: fail2ban_binary
+
+- name: Install fail2ban exporter binary
+  ansible.builtin.copy:
+    src: "{{ fail2ban_binary.files[0].path }}"
+    dest: /usr/local/bin/fail2ban_exporter
+    mode: '0755'
+    owner: root
+    group: root
+    remote_src: yes
+
+- name: Clean up temporary files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/fail2ban_exporter.tar.gz
+    - /tmp/fail2ban_exporter
+
+- name: Install fail2ban exporter systemd service
+  ansible.builtin.template:
+    src: fail2ban_exporter.service.j2
+    dest: /etc/systemd/system/fail2ban_exporter.service
+    mode: "0644"
+  notify: Restart fail2ban_exporter
+
+- name: Enable and start fail2ban exporter
+  ansible.builtin.systemd:
+    name: fail2ban_exporter
+    state: started
+    enabled: true
+    daemon_reload: true
