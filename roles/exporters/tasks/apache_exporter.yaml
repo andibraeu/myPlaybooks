@@ -20,6 +20,8 @@
       <Location /server-status>
         SetHandler server-status
         Require local
+        # Explizit Proxy deaktivieren für den Fall, dass VHosts Proxy verwenden
+        ProxyPass !
       </Location>
   when: _enable_apache_effective | bool
   notify: Reload apache2
