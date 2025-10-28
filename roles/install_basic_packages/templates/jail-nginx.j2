@@ -1,0 +1,36 @@
+# Nginx fail2ban jails
+# Automatically configured by Ansible
+
+[nginx-http-auth]
+enabled = true
+port = http,https
+logpath = /var/log/nginx/error.log
+maxretry = 3
+bantime = 3600
+findtime = 600
+
+[nginx-botsearch]
+enabled = true
+port = http,https
+logpath = /var/log/nginx/access.log
+maxretry = 2
+bantime = 86400
+findtime = 600
+
+[nginx-bad-request]
+enabled = true
+port = http,https
+logpath = /var/log/nginx/access.log
+maxretry = 6
+bantime = 86400
+findtime = 300
+
+[nginx-limit-req]
+enabled = true
+port = http,https
+logpath = /var/log/nginx/error.log
+maxretry = 10
+bantime = 3600
+findtime = 300
+
+

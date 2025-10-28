@@ -52,8 +52,14 @@
   notify: Restart fail2ban
 
 - name: Check if Apache is installed
-  ansible.builtin.command: dpkg -l apache2
+  ansible.builtin.shell: dpkg -l apache2 | grep -q "^ii"
   register: apache_check
+  failed_when: false
+  changed_when: false
+
+- name: Check if Nginx is installed
+  ansible.builtin.shell: dpkg -l nginx | grep -q "^ii"
+  register: nginx_check
   failed_when: false
   changed_when: false
 
@@ -79,6 +85,17 @@
   become: true
   notify: Restart fail2ban
   when: apache_check.rc == 0
+
+- name: Configure fail2ban Nginx jails
+  ansible.builtin.template:
+    src: jail-nginx.j2
+    dest: /etc/fail2ban/jail.d/nginx.conf
+    owner: root
+    group: root
+    mode: '0644'
+  become: true
+  notify: Restart fail2ban
+  when: nginx_check.rc == 0
 
 - name: Configure fail2ban MySQL jails
   ansible.builtin.template:
