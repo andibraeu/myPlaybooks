@@ -25,3 +25,6 @@
 
 - name: Restart fail2ban_exporter
   ansible.builtin.service: { name: fail2ban_exporter, state: restarted, enabled: true }
+
+- name: Restart prometheus-node-exporter-apt
+  ansible.builtin.service: { name: prometheus-node-exporter-apt.service, state: restarted, enabled: true }

@@ -6,6 +6,29 @@
     state: present
     update_cache: true
 
+- name: Install prometheus-node-exporter-collectors (für apt-Metriken)
+  ansible.builtin.apt:
+    name: prometheus-node-exporter-collectors
+    state: present
+    update_cache: true
+  when: ansible_distribution == 'Ubuntu' and ansible_distribution_version == '24.04'
+
+- name: Fix apt_info.py für Ubuntu 24.04 (Bug #2084665)
+  ansible.builtin.get_url:
+    url: https://salsa.debian.org/go-team/packages/prometheus-node-exporter-collectors/-/raw/c446e9d7a590ac4361b0e9e917b0ddf3d204cf50/apt_info.py
+    dest: /usr/share/prometheus-node-exporter-collectors/apt_info.py
+    mode: '0755'
+    owner: root
+    group: root
+  when: ansible_distribution == 'Ubuntu' and ansible_distribution_version == '24.04'
+  notify: Restart prometheus-node-exporter-apt
+
+- name: Ensure prometheus-node-exporter-apt service is enabled
+  ansible.builtin.systemd:
+    name: prometheus-node-exporter-apt.service
+    enabled: true
+  when: ansible_distribution == 'Ubuntu' and ansible_distribution_version == '24.04'
+
 - name: Configure node_exporter defaults
   ansible.builtin.template:
     src: node_exporter_default.j2
