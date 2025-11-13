@@ -28,6 +28,7 @@
       - diskstats
       - netdev
       - loadavg
+      - logind
       - hwmon
       - systemd
       - os
