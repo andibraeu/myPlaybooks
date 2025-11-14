@@ -81,6 +81,12 @@ scrape_configs:
 {% if custom_scrape_services is defined %}
 {% for service in custom_scrape_services %}
   - job_name: "{{ service.name }}"
+{% if service.params is defined %}
+    params:
+{% for key, value in service.params.items() %}
+      {{ key }}: {{ value | to_json }}
+{% endfor %}
+{% endif %}
     static_configs: [{ targets: ["{{ service.target }}"] }]
     scrape_interval: "{{ service.interval | default('60s') }}"
 {% endfor %}
