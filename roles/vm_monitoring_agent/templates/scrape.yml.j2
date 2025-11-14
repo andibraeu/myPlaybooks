@@ -81,10 +81,10 @@ scrape_configs:
 {% if custom_scrape_services is defined %}
 {% for service in custom_scrape_services %}
   - job_name: "{{ service.name }}"
-{% if service.params is defined %}
+{% if service.params is defined and service.params | length > 0 %}
     params:
 {% for key, value in service.params.items() %}
-      {{ key }}: {{ value | to_json }}
+      {{ key }}: {{ value }}
 {% endfor %}
 {% endif %}
     static_configs: [{ targets: ["{{ service.target }}"] }]
