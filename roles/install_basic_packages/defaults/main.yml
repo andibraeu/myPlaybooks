@@ -11,7 +11,7 @@ base_packages:
   - htop
   - vim
   - aptitude
-  - ntp
+  - ntpsec
   - curl
   - zsh
   - git

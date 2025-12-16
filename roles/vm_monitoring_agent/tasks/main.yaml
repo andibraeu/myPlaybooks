@@ -5,14 +5,23 @@
     name: snapd
     state: present
     update_cache: true
-  when: ansible_architecture != "aarch64"
+  when: ansible_facts['architecture'] != "aarch64"
 
-- name: Ensure vmagent snap is installed
+- name: Ensure vmagent snap is installed (via community.general.snap, errors ignored)
   community.general.snap:
     name: "{{ vmagent_snap_name }}"
     state: present
     channel: "{{ vmagent_snap_channel }}"
-  when: ansible_architecture != "aarch64"
+  register: vmagent_snap
+  ignore_errors: true
+  when: ansible_facts['architecture'] != "aarch64"
+
+- name: Verify vmagent snap is installed
+  ansible.builtin.command: snap list "{{ vmagent_snap_name }}"
+  register: vmagent_snap_check
+  changed_when: false
+  failed_when: vmagent_snap_check.rc != 0
+  when: ansible_facts['architecture'] != "aarch64"
 
 # Falls der Snap-eigene Dienst existiert, stoppen/disable (wir nutzen eigene Unit)
 - name: Disable snap vmagent service if present
@@ -21,14 +30,14 @@
     state: stopped
     enabled: false
   ignore_errors: true
-  when: ansible_architecture != "aarch64"
+  when: ansible_facts['architecture'] != "aarch64"
 
 - name: Download vmagent binary (arm64)
   ansible.builtin.get_url:
     url: "{{ vmagent_arm64_url }}"
     dest: /tmp/vmagent.tar.gz
     mode: '0644'
-  when: ansible_architecture == "aarch64"
+  when: ansible_facts['architecture'] == "aarch64"
 
 - name: Extract vmagent binary (arm64)
   ansible.builtin.unarchive:
@@ -36,19 +45,19 @@
     dest: /opt/vmagent/
     remote_src: yes
     extra_opts: [--strip-components=1]
-  when: ansible_architecture == "aarch64"
+  when: ansible_facts['architecture'] == "aarch64"
 
 - name: Ensure vmagent binary is executable (arm64)
   ansible.builtin.file:
     path: /opt/vmagent/vmagent-prod
     mode: '0755'
     state: file
-  when: ansible_architecture == "aarch64"
+  when: ansible_facts['architecture'] == "aarch64"
 
 - name: Adjust vmagent binary path for arm64
   set_fact:
       vmagent_binary_path: "/opt/vmagent/vmagent-prod"
-  when: ansible_architecture == "aarch64"
+  when: ansible_facts['architecture'] == "aarch64"
 
 # 2) Config-Dateien
 - name: Ensure config dir exists
