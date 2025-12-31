@@ -54,9 +54,9 @@
 
   roles:
   - install_sudo
+  - install_basic_packages
   - add_admin_user
   - copy_ssh_keys
-  - install_basic_packages
   - role: exporters
     when: monitor_with_vmagent | default(false)
     become: true
