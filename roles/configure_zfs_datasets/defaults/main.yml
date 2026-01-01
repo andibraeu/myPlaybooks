@@ -1,0 +1,31 @@
+---
+# ZFS Pool name
+zfs_pool_name: tank
+
+# List of datasets to create
+# Example für unverschlüsseltes Dataset:
+# zfs_datasets:
+#   - name: k8s-unencrypted
+#
+# Example für verschlüsseltes Dataset (mit Keyfile):
+# zfs_datasets:
+#   - name: k8s-encrypted
+#     encryption: true
+#     encryption_algorithm: aes-256-gcm
+#     encryption_keyformat: hex  # hex (64 Zeichen) oder raw (32 Bytes)
+#     encryption_key: "dein-verschlüsselter-schlüssel"  # In vault.yaml speichern!
+#     # Hex-Schlüssel generieren mit: openssl rand -hex 32
+# zfs_datasets: []
+
+# List of dataset properties to set
+# Example:
+# zfs_dataset_properties:
+#   - dataset: k8s-encrypted
+#     property: quota
+#     value: 2T
+#   - dataset: k8s-unencrypted
+#     property: quota
+#     value: 1T
+# zfs_dataset_properties: []
+
+

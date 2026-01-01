@@ -1,0 +1,109 @@
+---
+- name: Setup NAS für Kubernetes Storage
+  hosts: nas  # Host-Gruppe für NAS-Systeme - füge dein NAS zum Inventory hinzu
+  become: true
+  # Alle Variablen werden aus host_vars/<hostname>/ geladen:
+  # - host_vars/s54-k3s-nas/vars.yaml (nicht-sensible Werte)
+  # - host_vars/s54-k3s-nas/vault.yaml (sensibles, verschlüsselt mit ansible-vault)
+  #
+  # Beispiel-Struktur für host_vars/s54-k3s-nas/vars.yaml:
+  #   zfs_pool_name: tank
+  #   zfs_datasets:
+  #     - name: k8s-unencrypted
+  #     - name: k8s-encrypted
+  #       encryption: true
+  #       encryption_algorithm: aes-256-gcm
+  #       encryption_keyformat: raw
+  #   zfs_dataset_properties:
+  #     - dataset: k8s-encrypted
+  #       property: quota
+  #       value: 2T
+  #   nfs_export_path: /tank/k8s-storage
+  #   nfs_allowed_networks: 10.0.0.0/8
+  #   nfs_domain: local
+  #   iscsi_target_iqn: iqn.2024-01.local.s54:k8s-iscsi
+  #   iscsi_portal_ip: 0.0.0.0
+  #   iscsi_initiator_iqn: iqn.2024-01.local.k3s:*
+  #
+  # Beispiel-Struktur für host_vars/s54-k3s-nas/vault.yaml:
+  #   zfs_datasets_encryption_keys:
+  #     k8s-encrypted: "dein-32-zeichen-langer-zufaelliger-schluessel"
+  #   iscsi_chap_username: k8s
+  #   iscsi_chap_password: "dein-sicheres-passwort"
+  #
+  # Vault verschlüsseln mit: ansible-vault encrypt host_vars/s54-k3s-nas/vault.yaml
+  # Playbook ausführen mit: ansible-playbook setup_nas.yaml -i inventory-s54.yml --ask-vault-pass
+  
+  pre_tasks:
+    - name: Installiere ZFS-Utilities (benötigt für Pool-Erstellung)
+      ansible.builtin.apt:
+        name:
+          - zfsutils-linux
+          - zfs-zed
+        state: present
+        update_cache: true
+    
+    - name: Prüfe ob ZFS-Pool existiert
+      ansible.builtin.command: zpool list {{ zfs_pool_name | default('tank') }}
+      register: zfs_pool_check
+      changed_when: false
+      failed_when: false
+    
+    - name: Warnung ausgeben, wenn ZFS-Pool nicht existiert
+      ansible.builtin.debug:
+        msg: |
+          ⚠️  WARNUNG: ZFS-Pool '{{ zfs_pool_name | default("tank") }}' existiert noch nicht!
+          
+          Nach der Installation der Pakete bitte manuell erstellen:
+          1. Disk-IDs ermitteln: ls -l /dev/disk/by-id/
+          2. ZFS-Pool: zpool create {{ zfs_pool_name | default("tank") }} mirror /dev/disk/by-id/ata-<sda-id> /dev/disk/by-id/ata-<sdb-id>
+          
+          Optional: Datasets können manuell erstellt werden ODER via Ansible (wenn zfs_datasets in host_vars definiert ist).
+          
+          Siehe README in k3s-deployments/s54/apps/democratic-csi/README.md für Details.
+      when: zfs_pool_check.rc != 0
+  
+  roles:
+    # ZFS-Datasets: Erstellt Datasets und setzt Properties (Quotas, Compression, etc.)
+    # Diese Rolle wird ausgeführt, wenn der Pool existiert UND:
+    # - zfs_datasets definiert ist (um Datasets zu erstellen) ODER
+    # - zfs_dataset_properties definiert ist (um Properties zu setzen)
+    - role: configure_zfs_datasets
+      when: 
+        - zfs_pool_check.rc == 0
+        - (zfs_datasets is defined and zfs_datasets | length > 0) or (zfs_dataset_properties is defined and zfs_dataset_properties | length > 0)
+    
+    # NFS Server Setup
+    - configure_nfs_server
+    
+    # iSCSI Target Setup
+    - configure_iscsi_target
+  
+  post_tasks:
+    - name: Zeige NFS-Export-Status
+      ansible.builtin.command: exportfs -v
+      register: nfs_exports
+      changed_when: false
+    
+    - name: Zeige iSCSI Target-Status
+      ansible.builtin.command: targetcli ls
+      register: iscsi_status
+      changed_when: false
+    
+    - name: Zusammenfassung
+      ansible.builtin.debug:
+        msg:
+          - "NAS-Setup abgeschlossen!"
+          - ""
+          - "NFS-Exports:"
+          - "{{ nfs_exports.stdout_lines | join('\n') }}"
+          - ""
+          - "iSCSI Targets:"
+          - "{{ iscsi_status.stdout_lines | join('\n') }}"
+          - ""
+          - "Nächste Schritte:"
+          - "1. SSH-Key für Democratic-CSI erstellen"
+          - "2. SealedSecret erstellen (siehe README)"
+          - "3. HelmRelease-Konfigurationen anpassen"
+          - "4. HelmReleases aktivieren"
+

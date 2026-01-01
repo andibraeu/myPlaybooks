@@ -1,0 +1,58 @@
+---
+- name: Install NFS kernel server packages
+  ansible.builtin.apt:
+    name:
+      - nfs-kernel-server
+      - nfs-common
+    state: present
+    update_cache: true
+
+- name: Create NFS export directory if it doesn't exist
+  ansible.builtin.file:
+    path: "{{ nfs_export_path | default('/mnt/k8s-storage') }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Configure NFS exports
+  ansible.builtin.lineinfile:
+    path: /etc/exports
+    line: "{{ nfs_export_path | default('/mnt/k8s-storage') }} {{ nfs_allowed_networks | default('10.0.0.0/8') }}(rw,sync,no_subtree_check,no_root_squash)"
+    regexp: "^{{ nfs_export_path | default('/mnt/k8s-storage') | regex_escape() }}"
+    state: present
+    create: true
+
+- name: Enable NFSv4
+  ansible.builtin.lineinfile:
+    path: /etc/default/nfs-kernel-server
+    regexp: '^RPCNFSDCOUNT'
+    line: 'RPCNFSDCOUNT=8'
+    state: present
+
+- name: Configure NFSv4 domain
+  ansible.builtin.lineinfile:
+    path: /etc/default/nfs-common
+    regexp: '^NEED_STATD'
+    line: 'NEED_STATD=no'
+    state: present
+
+- name: Configure NFSv4 ID mapping
+  ansible.builtin.lineinfile:
+    path: /etc/idmapd.conf
+    regexp: '^Domain'
+    line: 'Domain = {{ nfs_domain | default("local") }}'
+    state: present
+  notify: restart nfs services
+
+- name: Enable and start NFS kernel server
+  ansible.builtin.systemd:
+    name: nfs-kernel-server
+    enabled: true
+    state: started
+
+- name: Export NFS shares
+  ansible.builtin.command: exportfs -ra
+  changed_when: false
+
+

@@ -1,0 +1,20 @@
+---
+# iSCSI Target IQN
+iscsi_target_iqn: iqn.2024-01.local.nas:k8s-iscsi
+
+# iSCSI Portal IP (0.0.0.0 means listen on all interfaces)
+iscsi_portal_ip: 0.0.0.0
+
+# iSCSI Initiator IQN (wildcard for Kubernetes nodes)
+iscsi_initiator_iqn: iqn.2024-01.local.k3s:*
+
+# CHAP Authentication (optional, but recommended)
+# Set these in host_vars or group_vars for your NAS host
+# iscsi_chap_username: k8s
+# iscsi_chap_password: changeme
+
+# Backstore configuration (set in host_vars after ZFS pool is created)
+# iscsi_backstore_name: k8s-pool
+# iscsi_backstore_device: /dev/zvol/tank/k8s
+
+

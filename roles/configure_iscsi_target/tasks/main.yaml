@@ -1,0 +1,136 @@
+---
+- name: Install iSCSI target packages
+  ansible.builtin.apt:
+    name:
+      - targetcli-fb
+      - python3-rtslib-fb
+      - python3-configshell-fb
+    state: present
+    update_cache: true
+
+- name: Enable and start iSCSI target service
+  ansible.builtin.systemd:
+    name: target
+    enabled: true
+    state: started
+
+- name: Create iSCSI target configuration directory
+  ansible.builtin.file:
+    path: /etc/target
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Check if iSCSI target already exists
+  ansible.builtin.command: targetcli ls /iscsi/{{ iscsi_target_iqn }}
+  register: iscsi_target_exists
+  changed_when: false
+  failed_when: false
+
+- name: Create iSCSI target (if not exists)
+  ansible.builtin.command: |
+    targetcli <<EOF
+    /iscsi create {{ iscsi_target_iqn }}
+    /iscsi/{{ iscsi_target_iqn }}/tpg1/portals create {{ iscsi_portal_ip | default('0.0.0.0') }}
+    saveconfig
+    exit
+    EOF
+  when: iscsi_target_exists.rc != 0
+  register: iscsi_target_setup
+
+- name: Enable CHAP authentication on TPG
+  ansible.builtin.command: |
+    targetcli <<EOF
+    cd /iscsi/{{ iscsi_target_iqn }}/tpg1
+    set attribute authentication=1
+    cd /
+    saveconfig
+    exit
+    EOF
+  when: 
+    - iscsi_chap_username is defined
+    - iscsi_chap_password is defined
+  register: iscsi_tpg_auth_setup
+  failed_when: false
+
+- name: Create iSCSI backstore (optional, for Democratic-CSI not needed)
+  ansible.builtin.command: |
+    targetcli <<EOF
+    /backstores/block create {{ iscsi_backstore_name | default('k8s-pool') }} {{ iscsi_backstore_device }}
+    saveconfig
+    exit
+    EOF
+  when: 
+    - iscsi_backstore_device is defined
+    - iscsi_backstore_device | length > 0
+  register: iscsi_backstore_setup
+  failed_when: false
+
+- name: Check if iSCSI ACL already exists
+  ansible.builtin.command: targetcli ls /iscsi/{{ iscsi_target_iqn }}/tpg1/acls/{{ iscsi_initiator_iqn }}
+  register: iscsi_acl_exists
+  changed_when: false
+  failed_when: false
+  when:
+    - iscsi_chap_username is defined
+    - iscsi_chap_password is defined
+    - iscsi_initiator_iqn is defined
+
+- name: Create iSCSI ACL
+  ansible.builtin.command: |
+    targetcli <<EOF
+    cd /iscsi/{{ iscsi_target_iqn }}/tpg1/acls
+    create {{ iscsi_initiator_iqn }}
+    cd /
+    saveconfig
+    exit
+    EOF
+  when: 
+    - iscsi_chap_username is defined
+    - iscsi_chap_password is defined
+    - iscsi_initiator_iqn is defined
+    - iscsi_acl_exists.rc != 0
+  register: iscsi_acl_create
+
+- name: Configure CHAP userid for iSCSI ACL
+  ansible.builtin.command: |
+    targetcli <<EOF
+    cd /iscsi/{{ iscsi_target_iqn }}/tpg1/acls/{{ iscsi_initiator_iqn }}
+    set attribute auth.userid={{ iscsi_chap_username }}
+    cd /
+    saveconfig
+    exit
+    EOF
+  when: 
+    - iscsi_chap_username is defined
+    - iscsi_chap_password is defined
+    - iscsi_initiator_iqn is defined
+  register: iscsi_chap_userid
+
+- name: Configure CHAP password for iSCSI ACL
+  ansible.builtin.command: |
+    targetcli <<EOF
+    cd /iscsi/{{ iscsi_target_iqn }}/tpg1/acls/{{ iscsi_initiator_iqn }}
+    set attribute auth.password={{ iscsi_chap_password }}
+    cd /
+    saveconfig
+    exit
+    EOF
+  when: 
+    - iscsi_chap_username is defined
+    - iscsi_chap_password is defined
+    - iscsi_initiator_iqn is defined
+  register: iscsi_chap_password_setup
+
+- name: Restart iSCSI target service after configuration
+  ansible.builtin.systemd:
+    name: target
+    state: restarted
+  when: 
+    - (iscsi_target_setup is defined and iscsi_target_setup.changed) or 
+      (iscsi_tpg_auth_setup is defined and iscsi_tpg_auth_setup.changed) or
+      (iscsi_acl_create is defined and iscsi_acl_create.changed) or
+      (iscsi_chap_userid is defined and iscsi_chap_userid.changed) or
+      (iscsi_chap_password_setup is defined and iscsi_chap_password_setup.changed) or
+      (iscsi_backstore_setup is defined and iscsi_backstore_setup.changed)

@@ -1,0 +1,105 @@
+---
+# Hinweis: ZFS-Utilities müssen vorher installiert sein (z.B. via setup_nas.yaml)
+# Diese Rolle kann sowohl Datasets erstellen als auch Properties setzen
+
+- name: Check if ZFS pool exists
+  ansible.builtin.command: zpool list {{ zfs_pool_name }}
+  register: zpool_check
+  changed_when: false
+  failed_when: false
+
+- name: Fail if ZFS pool does not exist
+  ansible.builtin.fail:
+    msg: "ZFS pool '{{ zfs_pool_name }}' does not exist. Please create it manually first."
+  when: zfs_pool_check.rc != 0
+
+- name: Check if dataset already exists
+  ansible.builtin.command: zfs list {{ zfs_pool_name }}/{{ item.name }}
+  loop: "{{ zfs_datasets | default([]) }}"
+  when: zfs_datasets is defined
+  register: dataset_check
+  changed_when: false
+  failed_when: false
+
+- name: Create keyfile directory for encrypted datasets
+  ansible.builtin.file:
+    path: /etc/zfs/keys
+    state: directory
+    mode: '0700'
+    owner: root
+    group: root
+  when: 
+    - zfs_datasets is defined
+    - zfs_datasets | selectattr('encryption', 'defined') | selectattr('encryption', 'equalto', true) | list | length > 0
+
+- name: Get encryption key from vault or item
+  ansible.builtin.set_fact:
+    dataset_encryption_keys: "{{ zfs_datasets_encryption_keys | default({}) }}"
+  when: zfs_datasets is defined
+
+- name: Create keyfile for encrypted dataset
+  ansible.builtin.copy:
+    content: "{{ item.encryption_key | default(dataset_encryption_keys[item.name] | default('')) }}"
+    dest: "/etc/zfs/keys/{{ item.name }}.key"
+    mode: '0600'
+    owner: root
+    group: root
+  loop: "{{ zfs_datasets | default([]) }}"
+  when:
+    - zfs_datasets is defined
+    - item.encryption is defined
+    - item.encryption == true
+    - (item.encryption_key is defined) or (dataset_encryption_keys[item.name] is defined)
+    - (dataset_check.results | default([]) | selectattr('item.name', 'equalto', item.name) | map(attribute='rc') | first | default(1)) != 0
+  no_log: true  # Verhindert Logging des Schlüssels
+
+- name: Create unencrypted ZFS datasets
+  community.general.zfs:
+    name: "{{ zfs_pool_name }}/{{ item.item.name }}"
+    state: present
+  loop: "{{ dataset_check.results | default([]) }}"
+  when:
+    - zfs_datasets is defined
+    - item.item.encryption is not defined or item.item.encryption == false
+    - item.rc != 0
+  register: dataset_creation_unencrypted
+
+- name: Create encrypted ZFS datasets
+  community.general.zfs:
+    name: "{{ zfs_pool_name }}/{{ item.item.name }}"
+    state: present
+    extra_zfs_properties:
+      encryption: "{{ item.item.encryption_algorithm | default('aes-256-gcm') }}"
+      keyformat: "{{ item.item.encryption_keyformat | default('hex') }}"
+      keylocation: "file:///etc/zfs/keys/{{ item.item.name }}.key"
+  loop: "{{ dataset_check.results | default([]) }}"
+  when:
+    - zfs_datasets is defined
+    - item.item.encryption is defined
+    - item.item.encryption == true
+    - (item.item.encryption_key is defined) or (dataset_encryption_keys[item.item.name] is defined)
+    - item.rc != 0
+  register: dataset_creation_encrypted
+
+- name: Wait for datasets to be available
+  ansible.builtin.pause:
+    seconds: 2
+  when: 
+    - dataset_creation_unencrypted.changed | default(false) or dataset_creation_encrypted.changed | default(false)
+
+- name: Set ZFS dataset properties
+  ansible.builtin.command: |
+    zfs set {{ item.property }}={{ item.value }} {{ zfs_pool_name }}/{{ item.dataset }}
+  loop: "{{ zfs_dataset_properties | default([]) }}"
+  when: 
+    - zfs_dataset_properties is defined
+    - zfs_dataset_properties | length > 0
+  register: dataset_properties
+  failed_when: false  # Nicht fehlschlagen, wenn Dataset nicht existiert
+  changed_when: dataset_properties.rc == 0
+
+- name: Display created datasets
+  ansible.builtin.debug:
+    msg: "Created dataset: {{ zfs_pool_name }}/{{ item.name }}"
+  loop: "{{ zfs_datasets | default([]) }}"
+  when: zfs_datasets is defined

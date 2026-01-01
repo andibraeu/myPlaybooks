@@ -1,0 +1,11 @@
+---
+# NFS Export Path
+nfs_export_path: /mnt/k8s-storage
+
+# Allowed networks for NFS access (CIDR notation)
+nfs_allowed_networks: 10.0.0.0/8
+
+# NFS Domain for NFSv4
+nfs_domain: local
+
+
