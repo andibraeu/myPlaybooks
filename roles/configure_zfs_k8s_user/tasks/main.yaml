@@ -1,0 +1,45 @@
+---
+- name: Install sudo package (if not already installed)
+  ansible.builtin.apt:
+    name: sudo
+    state: present
+    update_cache: true
+
+- name: Create ZFS K8s user
+  ansible.builtin.user:
+    name: "{{ zfs_k8s_user }}"
+    comment: "{{ zfs_k8s_user_comment }}"
+    shell: "{{ zfs_k8s_user_shell }}"
+    create_home: true
+    system: false
+
+- name: Create .ssh directory for ZFS K8s user
+  ansible.builtin.file:
+    path: "/home/{{ zfs_k8s_user }}/.ssh"
+    state: directory
+    mode: '0700'
+    owner: "{{ zfs_k8s_user }}"
+    group: "{{ zfs_k8s_user }}"
+
+- name: Create sudoers file for ZFS K8s user
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/{{ zfs_k8s_user }}"
+    content: |
+      # Sudo rules for {{ zfs_k8s_user }} - Democratic-CSI ZFS operations
+      # Allow passwordless sudo for ZFS and ZPool commands only
+      {{ zfs_k8s_user }} ALL=(ALL) NOPASSWD: /usr/sbin/zfs, /usr/sbin/zpool, /usr/bin/zfs, /usr/bin/zpool
+    mode: '0440'
+    owner: root
+    group: root
+    validate: 'visudo -cf %s'
+
+- name: Disable root login via SSH
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PermitRootLogin'
+    line: 'PermitRootLogin no'
+    backup: true
+  when: disable_root_ssh | default(true)
+  register: sshd_config_changed
+  notify: restart sshd
+

@@ -1,0 +1,7 @@
+---
+# Default-Variablen für ZFS K8s User
+zfs_k8s_user: zfs-k8s
+zfs_k8s_user_comment: "User for Democratic-CSI ZFS operations"
+zfs_k8s_user_shell: /bin/bash
+disable_root_ssh: true
+

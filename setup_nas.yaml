@@ -8,6 +8,8 @@
   #
   # Beispiel-Struktur für host_vars/s54-k3s-nas/vars.yaml:
   #   zfs_pool_name: tank
+  #   zfs_k8s_user: zfs-k8s  # Optional: Standard ist zfs-k8s
+  #   disable_root_ssh: true  # Optional: Root-Login deaktivieren (Standard: true)
   #   zfs_datasets:
   #     - name: k8s-unencrypted
   #     - name: k8s-encrypted
@@ -64,6 +66,10 @@
       when: zfs_pool_check.rc != 0
   
   roles:
+    # ZFS K8s User: Erstellt dedizierten Benutzer für Democratic-CSI mit sudo-Rechten
+    # Deaktiviert Root-Login per SSH
+    - configure_zfs_k8s_user
+    
     # ZFS-Datasets: Erstellt Datasets und setzt Properties (Quotas, Compression, etc.)
     # Diese Rolle wird ausgeführt, wenn der Pool existiert UND:
     # - zfs_datasets definiert ist (um Datasets zu erstellen) ODER
@@ -102,8 +108,9 @@
           - "{{ iscsi_status.stdout_lines | join('\n') }}"
           - ""
           - "Nächste Schritte:"
-          - "1. SSH-Key für Democratic-CSI erstellen"
-          - "2. SealedSecret erstellen (siehe README)"
-          - "3. HelmRelease-Konfigurationen anpassen"
-          - "4. HelmReleases aktivieren"
+          - "1. SSH-Key für Democratic-CSI erstellen (für Benutzer {{ zfs_k8s_user | default('zfs-k8s') }})"
+          - "2. SSH-Key auf NAS kopieren: ssh-copy-id -i ~/.ssh/nas-democratic-csi.pub {{ zfs_k8s_user | default('zfs-k8s') }}@<nas-ip>"
+          - "3. SealedSecret erstellen (siehe README)"
+          - "4. HelmRelease-Konfigurationen anpassen (zfsHostUser: {{ zfs_k8s_user | default('zfs-k8s') }}, sudoEnabled: true)"
+          - "5. HelmReleases aktivieren"
 
