@@ -27,7 +27,7 @@
     content: |
       # Sudo rules for {{ zfs_k8s_user }} - Democratic-CSI ZFS operations
       # Allow passwordless sudo for ZFS and ZPool commands only
-      {{ zfs_k8s_user }} ALL=(ALL) NOPASSWD: /usr/sbin/zfs, /usr/sbin/zpool, /usr/bin/zfs, /usr/bin/zpool
+      {{ zfs_k8s_user }} ALL=(ALL) NOPASSWD: /usr/sbin/zfs, /usr/sbin/zpool, /usr/bin/zfs, /usr/bin/zpool, /usr/bin/targetcli
     mode: '0440'
     owner: root
     group: root
