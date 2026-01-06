@@ -45,14 +45,92 @@
   changed_when: iscsi_portal_create.rc == 0
   failed_when: false
 
-- name: Enable CHAP authentication on TPG
-  ansible.builtin.command: targetcli /iscsi/{{ iscsi_target_iqn }}/tpg1 set attribute authentication=1
+- name: Enable CHAP authentication on TPG and set generate_node_acls
+  ansible.builtin.command: targetcli /iscsi/{{ iscsi_target_iqn }}/tpg1 set attribute authentication=1 generate_node_acls=1 cache_dynamic_acls=1 demo_mode_write_protect=0
   when: 
     - iscsi_chap_username is defined
     - iscsi_chap_password is defined
   register: iscsi_tpg_auth_setup
   changed_when: iscsi_tpg_auth_setup.rc == 0
   failed_when: false
+
+# CHAP-Authentifizierung auf TPG-Level kann nicht via targetcli gesetzt werden,
+# da der Pfad /iscsi/.../tpg1/auth nicht existiert.
+# CHAP-Credentials müssen direkt in /etc/rtslib-fb-target/saveconfig.json gesetzt werden.
+
+- name: Set CHAP credentials in saveconfig.json
+  ansible.builtin.command: >
+    python3 << 'PYEOF'
+    import json
+    config_file = '/etc/rtslib-fb-target/saveconfig.json'
+    target_iqn = '{{ iscsi_target_iqn }}'
+    new_password = '{{ iscsi_chap_password }}'
+    new_userid = '{{ iscsi_chap_username }}'
+    
+    with open(config_file, 'r') as f:
+        config = json.load(f)
+    
+    found = False
+    for target in config.get('targets', []):
+        if target.get('wwn') == target_iqn:
+            for tpg in target.get('tpgs', []):
+                if isinstance(tpg, dict) and tpg.get('tag') == 1:
+                    old_password = tpg.get('chap_password', '')
+                    tpg['chap_userid'] = new_userid
+                    tpg['chap_password'] = new_password
+                    found = True
+                    print(f"CHAP-Auth gesetzt für {target_iqn}/tpg1")
+                    print(f"  Alt: {repr(old_password)} (Länge: {len(old_password)})")
+                    print(f"  Neu: {repr(new_password)} (Länge: {len(new_password)})")
+                    break
+            break
+    
+    if not found:
+        print(f"WARNUNG: Target {target_iqn} nicht gefunden in saveconfig.json!")
+        exit(1)
+    
+    with open(config_file, 'w') as f:
+        json.dump(config, f, indent=2)
+    
+    print("Config gespeichert.")
+    PYEOF
+  when:
+    - iscsi_chap_username is defined
+    - iscsi_chap_password is defined
+  register: chap_password_set
+  changed_when: chap_password_set.rc == 0
+  failed_when: chap_password_set.rc != 0
+
+- name: Restore iSCSI configuration from saveconfig.json (after CHAP setup)
+  ansible.builtin.command: targetcli restoreconfig
+  when:
+    - iscsi_chap_username is defined
+    - iscsi_chap_password is defined
+    - chap_password_set is defined
+    - chap_password_set.rc == 0
+  register: restore_after_chap
+  changed_when: restore_after_chap.rc == 0
+  failed_when: false
+
+- name: Display CHAP setup confirmation
+  ansible.builtin.debug:
+    msg:
+      - "======================================================================"
+      - "CHAP-Authentifizierung wurde automatisch konfiguriert!"
+      - "======================================================================"
+      - ""
+      - "Der Basename-Target wurde erstellt: {{ iscsi_target_iqn }}"
+      - "TPG-Attribute wurden gesetzt (authentication=1, generate_node_acls=1)"
+      - "CHAP-Credentials wurden in saveconfig.json gesetzt"
+      - "Config wurde mit targetcli restoreconfig geladen"
+      - ""
+      - "Prüfe ob es funktioniert hat:"
+      - "   sudo cat /etc/rtslib-fb-target/saveconfig.json | python3 -m json.tool | grep -A 30 '\"wwn\": \"{{ iscsi_target_iqn }}\"' | grep -E '(chap_userid|chap_password|authentication)'"
+      - ""
+      - "======================================================================"
+  when:
+    - iscsi_chap_username is defined
+    - iscsi_chap_password is defined
 
 - name: Create iSCSI backstore (optional, for Democratic-CSI not needed)
   ansible.builtin.command: targetcli /backstores/block create {{ iscsi_backstore_name | default('k8s-pool') }} {{ iscsi_backstore_device }}
@@ -63,59 +141,41 @@
   changed_when: iscsi_backstore_setup.rc == 0
   failed_when: false
 
-- name: Check if iSCSI ACL already exists
+# ACL-basierte Auth wird nicht mehr benötigt, da wir TPG-Level Auth verwenden
+# Die ACLs werden automatisch generiert durch generate_node_acls=1
+# Falls eine spezifische ACL benötigt wird, kann sie optional erstellt werden:
+- name: Check if iSCSI ACL already exists (optional, für generate_node_acls nicht zwingend)
   ansible.builtin.command: targetcli ls /iscsi/{{ iscsi_target_iqn }}/tpg1/acls/{{ iscsi_initiator_iqn }}
   register: iscsi_acl_exists
   changed_when: false
   failed_when: false
   when:
-    - iscsi_chap_username is defined
-    - iscsi_chap_password is defined
     - iscsi_initiator_iqn is defined
+    - iscsi_create_explicit_acl | default(false) | bool
 
-- name: Create iSCSI ACL
+- name: Create iSCSI ACL (optional, nur wenn explizit gewünscht)
   ansible.builtin.command: targetcli /iscsi/{{ iscsi_target_iqn }}/tpg1/acls create {{ iscsi_initiator_iqn }}
   when: 
-    - iscsi_chap_username is defined
-    - iscsi_chap_password is defined
     - iscsi_initiator_iqn is defined
+    - iscsi_create_explicit_acl | default(false) | bool
+    - iscsi_acl_exists is defined
+    - iscsi_acl_exists.rc is defined
     - iscsi_acl_exists.rc != 0
   register: iscsi_acl_create
   changed_when: iscsi_acl_create.rc == 0
   failed_when: false
 
-- name: Configure CHAP userid for iSCSI ACL
-  ansible.builtin.command: targetcli /iscsi/{{ iscsi_target_iqn }}/tpg1/acls/{{ iscsi_initiator_iqn }} set attribute auth.userid={{ iscsi_chap_username }}
-  when: 
-    - iscsi_chap_username is defined
-    - iscsi_chap_password is defined
-    - iscsi_initiator_iqn is defined
-  register: iscsi_chap_userid
-  changed_when: iscsi_chap_userid.rc == 0
-  failed_when: false
-
-- name: Configure CHAP password for iSCSI ACL
-  ansible.builtin.command: targetcli /iscsi/{{ iscsi_target_iqn }}/tpg1/acls/{{ iscsi_initiator_iqn }} set attribute auth.password={{ iscsi_chap_password }}
-  when: 
-    - iscsi_chap_username is defined
-    - iscsi_chap_password is defined
-    - iscsi_initiator_iqn is defined
-  register: iscsi_chap_password_setup
-  changed_when: iscsi_chap_password_setup.rc == 0
-  failed_when: false
-
-- name: Restore iSCSI configuration from saveconfig.json
-  ansible.builtin.command: targetcli restoreconfig
-  register: restore_config
-  changed_when: restore_config.rc == 0
+- name: Save iSCSI configuration to saveconfig.json
+  ansible.builtin.command: targetcli saveconfig
+  register: save_config
+  changed_when: save_config.rc == 0
   failed_when: false
   when: 
     - (iscsi_target_create_cmd is defined and iscsi_target_create_cmd.changed) or 
       (iscsi_portal_create is defined and iscsi_portal_create.changed) or
       (iscsi_tpg_auth_setup is defined and iscsi_tpg_auth_setup.changed) or
+      (chap_password_set is defined and chap_password_set.changed) or
       (iscsi_acl_create is defined and iscsi_acl_create.changed) or
-      (iscsi_chap_userid is defined and iscsi_chap_userid.changed) or
-      (iscsi_chap_password_setup is defined and iscsi_chap_password_setup.changed) or
       (iscsi_backstore_setup is defined and iscsi_backstore_setup.changed)
 
 - name: Restart iSCSI target service after configuration
@@ -126,7 +186,6 @@
     - (iscsi_target_create_cmd is defined and iscsi_target_create_cmd.changed) or 
       (iscsi_portal_create is defined and iscsi_portal_create.changed) or
       (iscsi_tpg_auth_setup is defined and iscsi_tpg_auth_setup.changed) or
+      (chap_password_set is defined and chap_password_set.changed) or
       (iscsi_acl_create is defined and iscsi_acl_create.changed) or
-      (iscsi_chap_userid is defined and iscsi_chap_userid.changed) or
-      (iscsi_chap_password_setup is defined and iscsi_chap_password_setup.changed) or
       (iscsi_backstore_setup is defined and iscsi_backstore_setup.changed)
