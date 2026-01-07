@@ -57,76 +57,36 @@
 # CHAP-Authentifizierung auf TPG-Level kann nicht via targetcli gesetzt werden,
 # da der Pfad /iscsi/.../tpg1/auth nicht existiert.
 # CHAP-Credentials müssen direkt in /etc/rtslib-fb-target/saveconfig.json gesetzt werden.
+#
+# HINWEIS: Die automatische CHAP-Konfiguration wurde entfernt.
+# Verwende stattdessen das manuelle Script: scripts/set_chap_credentials.py
+# Siehe README.md für detaillierte Anleitung zur manuellen CHAP-Konfiguration.
 
-- name: Set CHAP credentials in saveconfig.json
-  ansible.builtin.command: >
-    python3 << 'PYEOF'
-    import json
-    config_file = '/etc/rtslib-fb-target/saveconfig.json'
-    target_iqn = '{{ iscsi_target_iqn }}'
-    new_password = '{{ iscsi_chap_password }}'
-    new_userid = '{{ iscsi_chap_username }}'
-    
-    with open(config_file, 'r') as f:
-        config = json.load(f)
-    
-    found = False
-    for target in config.get('targets', []):
-        if target.get('wwn') == target_iqn:
-            for tpg in target.get('tpgs', []):
-                if isinstance(tpg, dict) and tpg.get('tag') == 1:
-                    old_password = tpg.get('chap_password', '')
-                    tpg['chap_userid'] = new_userid
-                    tpg['chap_password'] = new_password
-                    found = True
-                    print(f"CHAP-Auth gesetzt für {target_iqn}/tpg1")
-                    print(f"  Alt: {repr(old_password)} (Länge: {len(old_password)})")
-                    print(f"  Neu: {repr(new_password)} (Länge: {len(new_password)})")
-                    break
-            break
-    
-    if not found:
-        print(f"WARNUNG: Target {target_iqn} nicht gefunden in saveconfig.json!")
-        exit(1)
-    
-    with open(config_file, 'w') as f:
-        json.dump(config, f, indent=2)
-    
-    print("Config gespeichert.")
-    PYEOF
-  when:
-    - iscsi_chap_username is defined
-    - iscsi_chap_password is defined
-  register: chap_password_set
-  changed_when: chap_password_set.rc == 0
-  failed_when: chap_password_set.rc != 0
-
-- name: Restore iSCSI configuration from saveconfig.json (after CHAP setup)
-  ansible.builtin.command: targetcli restoreconfig
-  when:
-    - iscsi_chap_username is defined
-    - iscsi_chap_password is defined
-    - chap_password_set is defined
-    - chap_password_set.rc == 0
-  register: restore_after_chap
-  changed_when: restore_after_chap.rc == 0
-  failed_when: false
-
-- name: Display CHAP setup confirmation
+- name: Display CHAP setup instructions
   ansible.builtin.debug:
     msg:
       - "======================================================================"
-      - "CHAP-Authentifizierung wurde automatisch konfiguriert!"
+      - "CHAP-Authentifizierung - Manuelle Konfiguration erforderlich"
       - "======================================================================"
       - ""
       - "Der Basename-Target wurde erstellt: {{ iscsi_target_iqn }}"
       - "TPG-Attribute wurden gesetzt (authentication=1, generate_node_acls=1)"
-      - "CHAP-Credentials wurden in saveconfig.json gesetzt"
-      - "Config wurde mit targetcli restoreconfig geladen"
       - ""
-      - "Prüfe ob es funktioniert hat:"
+      - "NÄCHSTE SCHRITTE:"
+      - "1. Setze CHAP-Credentials manuell mit dem Script:"
+      - "   sudo python3 scripts/set_chap_credentials.py {{ iscsi_target_iqn }} {{ iscsi_chap_username }} '{{ iscsi_chap_password }}'"
+      - ""
+      - "2. Oder verwende die manuelle Methode (siehe README.md)"
+      - ""
+      - "3. Lade die Config neu:"
+      - "   sudo targetcli restoreconfig"
+      - "   # ODER"
+      - "   sudo systemctl restart target"
+      - ""
+      - "4. Prüfe ob es funktioniert hat:"
       - "   sudo cat /etc/rtslib-fb-target/saveconfig.json | python3 -m json.tool | grep -A 30 '\"wwn\": \"{{ iscsi_target_iqn }}\"' | grep -E '(chap_userid|chap_password|authentication)'"
       - ""
+      - "Siehe README.md für detaillierte Anleitung."
       - "======================================================================"
   when:
     - iscsi_chap_username is defined
@@ -174,7 +134,6 @@
     - (iscsi_target_create_cmd is defined and iscsi_target_create_cmd.changed) or 
       (iscsi_portal_create is defined and iscsi_portal_create.changed) or
       (iscsi_tpg_auth_setup is defined and iscsi_tpg_auth_setup.changed) or
-      (chap_password_set is defined and chap_password_set.changed) or
       (iscsi_acl_create is defined and iscsi_acl_create.changed) or
       (iscsi_backstore_setup is defined and iscsi_backstore_setup.changed)
 
@@ -186,6 +145,5 @@
     - (iscsi_target_create_cmd is defined and iscsi_target_create_cmd.changed) or 
       (iscsi_portal_create is defined and iscsi_portal_create.changed) or
       (iscsi_tpg_auth_setup is defined and iscsi_tpg_auth_setup.changed) or
-      (chap_password_set is defined and chap_password_set.changed) or
       (iscsi_acl_create is defined and iscsi_acl_create.changed) or
       (iscsi_backstore_setup is defined and iscsi_backstore_setup.changed)

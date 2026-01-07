@@ -1,0 +1,41 @@
+---
+# WireGuard Interface Name
+wireguard_interface: wg0
+
+# WireGuard Address (CIDR notation)
+# Example: "10.200.0.1/24" for NAS, "10.200.0.11/24" for K3s node 1
+wireguard_address: ""
+
+# WireGuard Listen Port (only needed on the "server" side, e.g., NAS)
+# Set to empty string on clients that don't need to listen
+wireguard_listen_port: 51820
+
+# WireGuard Private Key (should be set via vault.yaml)
+# Generate with: wg genkey
+wireguard_private_key: ""
+
+# WireGuard Peers
+# Example for NAS (receiving connections from K3s nodes):
+#   wireguard_peers:
+#     - name: k3s-node1
+#       public_key: "abc123..."
+#       allowed_ips: "10.200.0.11/32"
+#     - name: k3s-node2
+#       public_key: "def456..."
+#       allowed_ips: "10.200.0.12/32"
+#
+# Example for K3s node (connecting to NAS):
+#   wireguard_peers:
+#     - name: nas
+#       public_key: "xyz789..."
+#       allowed_ips: "10.200.0.1/32"
+#       endpoint: "192.168.1.100:51820"
+#       persistent_keepalive: 25
+wireguard_peers: []
+
+# Enable IP forwarding (usually not needed for simple NFS tunnel)
+wireguard_enable_ip_forward: false
+
+# PostUp/PostDown commands (optional)
+# wireguard_postup: "iptables -A FORWARD -i %i -j ACCEPT"
+# wireguard_postdown: "iptables -D FORWARD -i %i -j ACCEPT"

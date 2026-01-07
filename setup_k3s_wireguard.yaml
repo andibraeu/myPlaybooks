@@ -1,0 +1,43 @@
+---
+- name: Setup WireGuard on K3s nodes for secure NFS access
+  hosts: k3s-cluster
+  become: true
+  # Variables are loaded from group_vars/k3s_cluster.yml and k3s_cluster.vault.yml
+  # 
+  # Configuration files:
+  # - group_vars/k3s_cluster.yml          - shared config (peer, address mapping)
+  # - group_vars/k3s_cluster.vault.yml    - secrets (private keys, NAS public key)
+  #
+  # The wireguard_address and wireguard_private_key are automatically
+  # resolved per host using inventory_hostname and the mapping dicts.
+  #
+  # Setup:
+  # 1. Copy group_vars/k3s_cluster.vault.yml.example to group_vars/k3s_cluster.vault.yml
+  # 2. Fill in the WireGuard keys
+  # 3. Set wireguard_nas_endpoint in group_vars/k3s_cluster.yml to your NAS LAN IP
+  # 4. Encrypt: ansible-vault encrypt group_vars/k3s_cluster.vault.yml
+  #
+  # Run: ansible-playbook setup_k3s_wireguard.yaml -i inventory-s54.yml --ask-vault-pass
+  
+  roles:
+    - configure_wireguard
+  
+  post_tasks:
+    - name: Show WireGuard status
+      ansible.builtin.command: wg show
+      register: wg_status
+      changed_when: false
+    
+    - name: WireGuard Status
+      ansible.builtin.debug:
+        msg: "{{ wg_status.stdout_lines }}"
+    
+    - name: Test connection to NAS
+      ansible.builtin.command: ping -c 3 10.200.0.1
+      register: ping_result
+      changed_when: false
+      failed_when: false
+    
+    - name: Connection test result
+      ansible.builtin.debug:
+        msg: "{{ 'Connection to NAS successful!' if ping_result.rc == 0 else 'WARNING: No connection to NAS. Please check if NAS WireGuard is running.' }}"

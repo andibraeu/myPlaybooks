@@ -1,11 +1,22 @@
 ---
-# NFS Export Path
-nfs_export_path: /mnt/k8s-storage
+# NFS Exports (list format, recommended)
+# Example:
+#   nfs_exports:
+#     - path: /tank/k8s-encrypted
+#       allowed_networks: "10.200.0.0/24"
+#       options: "rw,sync,no_subtree_check,no_root_squash"
+#     - path: /tank/k8s-unencrypted
+#       allowed_networks: "10.200.0.0/24"
+#
+# If nfs_exports is not defined, no static exports are created.
+# This is fine when using democratic-csi, which creates exports dynamically via ZFS sharenfs.
 
-# Allowed networks for NFS access (CIDR notation)
+# Legacy single export (deprecated, use nfs_exports list instead)
+# nfs_export_path: /mnt/k8s-storage
+
+# Default allowed networks for NFS access (CIDR notation)
+# Used as fallback if not specified per export
 nfs_allowed_networks: 10.0.0.0/8
 
 # NFS Domain for NFSv4
 nfs_domain: local
-
-

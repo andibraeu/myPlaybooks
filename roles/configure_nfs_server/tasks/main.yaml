@@ -7,21 +7,51 @@
     state: present
     update_cache: true
 
+# Static NFS exports (optional - democratic-csi creates exports dynamically via ZFS)
 - name: Create NFS export directory if it doesn't exist
   ansible.builtin.file:
-    path: "{{ nfs_export_path | default('/mnt/k8s-storage') }}"
+    path: "{{ item }}"
     state: directory
     mode: '0755'
     owner: root
     group: root
+  loop: "{{ nfs_exports | map(attribute='path') | list }}"
+  when: nfs_exports is defined and nfs_exports | length > 0
 
 - name: Configure NFS exports
   ansible.builtin.lineinfile:
     path: /etc/exports
-    line: "{{ nfs_export_path | default('/mnt/k8s-storage') }} {{ nfs_allowed_networks | default('10.0.0.0/8') }}(rw,sync,no_subtree_check,no_root_squash)"
-    regexp: "^{{ nfs_export_path | default('/mnt/k8s-storage') | regex_escape() }}"
+    line: "{{ item.path }} {{ item.allowed_networks | default(nfs_allowed_networks) | default('10.0.0.0/8') }}({{ item.options | default('rw,sync,no_subtree_check,no_root_squash') }})"
+    regexp: "^{{ item.path | regex_escape() }}"
     state: present
     create: true
+  loop: "{{ nfs_exports }}"
+  when: nfs_exports is defined and nfs_exports | length > 0
+  notify: restart nfs services
+
+# Legacy single export support (deprecated, use nfs_exports list instead)
+- name: Create legacy NFS export directory if it doesn't exist
+  ansible.builtin.file:
+    path: "{{ nfs_export_path }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+  when:
+    - nfs_export_path is defined
+    - nfs_exports is not defined or nfs_exports | length == 0
+
+- name: Configure legacy NFS export
+  ansible.builtin.lineinfile:
+    path: /etc/exports
+    line: "{{ nfs_export_path }} {{ nfs_allowed_networks | default('10.0.0.0/8') }}(rw,sync,no_subtree_check,no_root_squash)"
+    regexp: "^{{ nfs_export_path | regex_escape() }}"
+    state: present
+    create: true
+  when:
+    - nfs_export_path is defined
+    - nfs_exports is not defined or nfs_exports | length == 0
+  notify: restart nfs services
 
 - name: Enable NFSv4
   ansible.builtin.lineinfile:
@@ -54,5 +84,3 @@
 - name: Export NFS shares
   ansible.builtin.command: exportfs -ra
   changed_when: false
-
-

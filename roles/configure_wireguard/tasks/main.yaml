@@ -1,0 +1,58 @@
+---
+- name: Install WireGuard packages
+  ansible.builtin.apt:
+    name:
+      - wireguard
+      - wireguard-tools
+    state: present
+    update_cache: true
+
+- name: Ensure WireGuard directory exists
+  ansible.builtin.file:
+    path: /etc/wireguard
+    state: directory
+    mode: '0700'
+    owner: root
+    group: root
+
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - wireguard_address | length > 0
+      - wireguard_private_key | length > 0
+      - wireguard_peers | length > 0
+    fail_msg: "wireguard_address, wireguard_private_key and wireguard_peers must be defined"
+
+- name: Deploy WireGuard configuration
+  ansible.builtin.template:
+    src: wg0.conf.j2
+    dest: "/etc/wireguard/{{ wireguard_interface }}.conf"
+    owner: root
+    group: root
+    mode: '0600'
+  notify:
+    - restart wireguard
+
+- name: Enable IP forwarding
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    sysctl_set: true
+    state: present
+    reload: true
+  when: wireguard_enable_ip_forward | bool
+
+- name: Get WireGuard service status
+  ansible.builtin.systemd:
+    name: "wg-quick@{{ wireguard_interface }}"
+  register: wireguard_service_status
+  failed_when: false
+
+- name: Enable and start WireGuard service
+  ansible.builtin.systemd:
+    name: "wg-quick@{{ wireguard_interface }}"
+    enabled: true
+    state: started
+  when: wireguard_service_status.status.ActiveState != "active"
+
+

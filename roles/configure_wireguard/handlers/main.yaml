@@ -1,0 +1,14 @@
+---
+- name: restart wireguard
+  ansible.builtin.systemd:
+    name: "wg-quick@{{ wireguard_interface }}"
+    state: restarted
+  when: wireguard_service_status.status.ActiveState == "active"
+
+- name: start wireguard
+  ansible.builtin.systemd:
+    name: "wg-quick@{{ wireguard_interface }}"
+    enabled: true
+    state: started
+
+
