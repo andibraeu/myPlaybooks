@@ -26,8 +26,8 @@
     dest: "/etc/sudoers.d/{{ zfs_k8s_user }}"
     content: |
       # Sudo rules for {{ zfs_k8s_user }} - Democratic-CSI ZFS operations
-      # Allow passwordless sudo for ZFS and ZPool commands only
-      {{ zfs_k8s_user }} ALL=(ALL) NOPASSWD: /usr/sbin/zfs, /usr/sbin/zpool, /usr/bin/zfs, /usr/bin/zpool, /usr/bin/targetcli
+      # Allow passwordless sudo for ZFS, ZPool, iSCSI (targetcli) and NFS (chmod/chown) commands
+      {{ zfs_k8s_user }} ALL=(ALL) NOPASSWD: /usr/sbin/zfs, /usr/sbin/zpool, /usr/bin/zfs, /usr/bin/zpool, /usr/bin/targetcli, /bin/chmod, /bin/chown, /usr/bin/chmod, /usr/bin/chown
     mode: '0440'
     owner: root
     group: root
