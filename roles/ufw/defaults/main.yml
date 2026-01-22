@@ -4,8 +4,7 @@
 # Network settings
 ufw_allow_home_network: true
 ufw_home_network: "10.64.32.0/24"
-ufw_blocked_ports:
-  - 8095
+ufw_blocked_ports: []
 
 # K3s specific networks
 k3s_pod_network: "10.42.0.0/16"
@@ -52,13 +51,24 @@ ufw_port_groups:
       - { port: 31000 }   # NodePort UI Default
       - { port: 8000 }    # UI (wenn über NodePort exponiert)
       - { port: 18080 }   # CSI Driver
-  
+
   - name: iscsi
     ports:
       - { port: 3260 }    # iSCSI Target
       - { port: 860 }     # iSCSI SCSI Target Port
       - { port: '5800:5810' } # VNC für mögliche Longhorn-Instanzen
-  
+
+  - name: nfs
+    ports:
+      - { port: 2049, proto: tcp }  # NFS
+      - { port: 2049, proto: udp }
+      - { port: 111,  proto: tcp }  # RPC portmapper (v.a. NFSv3)
+      - { port: 111,  proto: udp }
+
+  - name: wireguard
+    ports:
+      - { port: 51820, proto: udp } # WireGuard Standard-Port
+
   - name: home_automation
     ports:
       - { port: 5353, proto: udp }
