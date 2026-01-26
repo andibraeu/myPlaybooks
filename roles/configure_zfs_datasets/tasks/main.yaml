@@ -103,3 +103,36 @@
     msg: "Created dataset: {{ zfs_pool_name }}/{{ item.name }}"
   loop: "{{ zfs_datasets | default([]) }}"
   when: zfs_datasets is defined
+
+# Systemd service for automatic ZFS key loading at boot
+- name: Check if any encrypted datasets exist
+  ansible.builtin.command: zfs get -H -o value encryption {{ zfs_pool_name }}
+  register: zfs_encryption_check
+  changed_when: false
+  failed_when: false
+
+- name: Find all encrypted datasets in pool
+  ansible.builtin.shell: |
+    zfs get -r -H -o name,value encryption {{ zfs_pool_name }} | grep -v "off$" | grep -v "^{{ zfs_pool_name }}\s" | wc -l
+  register: encrypted_datasets_count
+  changed_when: false
+  failed_when: false
+
+- name: Deploy zfs-load-key systemd service
+  ansible.builtin.template:
+    src: zfs-load-key.service.j2
+    dest: /etc/systemd/system/zfs-load-key.service
+    owner: root
+    group: root
+    mode: '0644'
+  when: (encrypted_datasets_count.stdout | default('0') | int) > 0
+  notify:
+    - Reload systemd daemon
+    - Enable zfs-load-key service
+
+- name: Ensure zfs-load-key service is enabled
+  ansible.builtin.systemd:
+    name: zfs-load-key
+    enabled: true
+    daemon_reload: true
+  when: (encrypted_datasets_count.stdout | default('0') | int) > 0

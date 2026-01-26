@@ -1,0 +1,27 @@
+[Unit]
+Description=Load ZFS encryption keys and restore dependent services
+DefaultDependencies=no
+Before=zfs-mount.service
+After=zfs-import.target
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Load all ZFS encryption keys
+ExecStart=/sbin/zfs load-key -a
+# Mount all ZFS datasets (ensures ZVOLs are available)
+ExecStart=/sbin/zfs mount -a
+{% if zfs_restore_iscsi_targets | default(true) %}
+# Restore iSCSI target configuration (re-creates backstores with now-available ZVOLs)
+# Small delay to ensure ZVOL devices are ready
+ExecStart=/bin/sleep 2
+ExecStart=/usr/bin/targetctl restore
+{% endif %}
+{% if zfs_restart_nfs_server | default(true) %}
+# Restart NFS server to re-export mounted datasets
+ExecStart=/bin/systemctl restart nfs-kernel-server
+{% endif %}
+
+[Install]
+WantedBy=zfs-mount.service

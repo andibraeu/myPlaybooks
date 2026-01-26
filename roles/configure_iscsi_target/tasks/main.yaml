@@ -147,3 +147,14 @@
       (iscsi_tpg_auth_setup is defined and iscsi_tpg_auth_setup.changed) or
       (iscsi_acl_create is defined and iscsi_acl_create.changed) or
       (iscsi_backstore_setup is defined and iscsi_backstore_setup.changed)
+
+# Cron-Job für regelmäßiges Speichern der iSCSI-Konfiguration
+# Notwendig weil Democratic-CSI Backstores dynamisch erstellt ohne saveconfig aufzurufen
+- name: Create cron job for periodic targetcli saveconfig
+  ansible.builtin.cron:
+    name: "targetcli saveconfig"
+    minute: "*/5"
+    job: "/usr/bin/targetcli saveconfig > /dev/null 2>&1"
+    user: root
+    state: present
+  when: iscsi_enable_saveconfig_cron | default(true) | bool

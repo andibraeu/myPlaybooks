@@ -28,4 +28,13 @@ zfs_pool_name: tank
 #     value: 1T
 # zfs_dataset_properties: []
 
+# Systemd service options for zfs-load-key.service
+# These control what happens after ZFS keys are loaded at boot
 
+# Restore iSCSI targets after loading ZFS keys (requires targetcli-fb)
+# Set to true if you use iSCSI with ZVOLs on encrypted datasets
+zfs_restore_iscsi_targets: true
+
+# Restart NFS server after mounting ZFS datasets
+# Set to true if you export ZFS datasets via NFS
+zfs_restart_nfs_server: true
