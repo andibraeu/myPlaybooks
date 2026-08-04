@@ -128,9 +128,7 @@
   when: (encrypted_datasets_count.stdout | default('0') | int) > 0
   notify:
     - Reload systemd daemon
-    - Enable zfs-load-key service
-
-- name: Ensure zfs-load-key service is enabled
+    - Enable zfs-load-key service- name: Ensure zfs-load-key service is enabled
   ansible.builtin.systemd:
     name: zfs-load-key
     enabled: true
